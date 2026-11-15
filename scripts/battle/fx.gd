@@ -1,19 +1,25 @@
 class_name FxLayer
 extends Node2D
-## 轻量特效：命中火花、击破圆环、飘字。
+## 轻量特效：火花、圆环、飘字。
 
-var sparks: Array = []  # [pos, vel, life, color]
-var rings: Array = []   # [pos, t, max_r, color]
+var sparks := []  # [pos, vel, life, color]
+var rings := []   # [pos, t, max_r, color]
+var texts := []   # [pos, text, life, color]
 
 func spark(pos: Vector2, color := Color(1, 0.9, 0.6)) -> void:
-	if sparks.size() > 150:
+	if sparks.size() > 160:
 		return
-	sparks.append([pos, Vector2.from_angle(randf() * TAU) * randf_range(30, 90), 0.18, color])
+	sparks.append([pos, Vector2.from_angle(randf() * TAU) * randf_range(20, 70), 0.18, color])
 
-func burst(pos: Vector2, color := Color(0.6, 0.9, 1.0), n := 10) -> void:
-	rings.append([pos, 0.0, 22.0, color])
+func burst(pos: Vector2, color := Color(0.6, 0.9, 1.0), n := 8, r := 18.0) -> void:
+	rings.append([pos, 0.0, r, color])
 	for i in n:
-		sparks.append([pos, Vector2.from_angle(randf() * TAU) * randf_range(40, 160), randf_range(0.2, 0.45), color])
+		if sparks.size() > 220:
+			break
+		sparks.append([pos, Vector2.from_angle(randf() * TAU) * randf_range(30, 120), randf_range(0.2, 0.45), color])
+
+func text(pos: Vector2, s: String, color := Color.WHITE) -> void:
+	texts.append([pos, s, 0.9, color])
 
 func tick(dt: float) -> void:
 	for s in sparks:
@@ -23,6 +29,10 @@ func tick(dt: float) -> void:
 	for r in rings:
 		r[1] += dt
 	rings = rings.filter(func(r): return r[1] < 0.3)
+	for x in texts:
+		x[0].y -= 14.0 * dt
+		x[2] -= dt
+	texts = texts.filter(func(x): return x[2] > 0.0)
 	queue_redraw()
 
 func _draw() -> void:
@@ -33,3 +43,7 @@ func _draw() -> void:
 		var c: Color = r[3]
 		c.a = 1.0 - k
 		draw_arc(r[0], r[2] * k + 2.0, 0, TAU, 20, c, 2.0)
+	for x in texts:
+		var c2: Color = x[3]
+		c2.a = minf(1.0, x[2] * 2.0)
+		draw_string(G.font, (x[0] + Vector2(-40, 0)).round(), x[1], HORIZONTAL_ALIGNMENT_CENTER, 80, 12, c2)

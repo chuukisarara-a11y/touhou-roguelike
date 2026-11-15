@@ -1,0 +1,39 @@
+extends Node2D
+## 结算界面：通关或失败。
+
+var win := false
+
+func setup(arg: Dictionary) -> void:
+	win = arg.get("win", false)
+
+func _ready() -> void:
+	var h := G.field_h()
+	UI.backdrop(self)
+	var run: Dictionary = G.run
+	var y := h * 0.14
+	var body: Label
+	if win:
+		UI.label(self, "第一章 通关", y, 24, Color(1, 0.9, 0.6))
+		body = UI.label(self, "琪露诺被打败了，雾之湖恢复了平静。\n后面的章节还在开发中。", y + 34, 12, Color(0.9, 0.9, 1.0), 10)
+	else:
+		UI.label(self, "满身疮痍", y, 24, Color(1, 0.45, 0.55))
+		body = UI.label(self, "在第 %d 层倒下了。\n下次会更顺利的。" % run.floor, y + 34, 12, Color(0.9, 0.9, 1.0), 10)
+	y = body.position.y + body.size.y + 10
+	var ws := []
+	for w in run.weapons:
+		ws.append("%s Lv%d" % [Db.WEAPONS[w.id].name, w.lv])
+	var rs := []
+	for r in run.relics:
+		rs.append(Db.RELICS[r].name)
+	var txt := "击破敌人：%d\n完成战斗：%d\n持有钱：%d\n\n符札：%s\n宝具：%s" % [run.kills, run.battles, run.money, "、".join(ws), "、".join(rs) if not rs.is_empty() else "无"]
+	var l := UI.label(self, txt, y, 12, Color(0.8, 0.8, 0.95), 10)
+	UI.button(self, "回到标题", minf(h - 36, l.position.y + l.size.y + 12), func(): G.main.goto("title"), 28.0)
+
+func bot_step() -> void:
+	var at = G.main.get_children().filter(func(c): return c.has_method("note"))
+	var ws := []
+	for w in G.run.weapons:
+		ws.append("%s%d" % [w.id, w.lv])
+	at[0].finish("win=%s kills=%d battles=%d money=%d hearts=%d weapons=%s relics=%s" % [win, G.run.kills, G.run.battles, G.run.money, G.run.hearts, ",".join(ws), ",".join(G.run.relics)])
+	if at[0].runs_left > 0:
+		G.main.goto("title")
