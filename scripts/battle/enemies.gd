@@ -117,7 +117,7 @@ func tick(dt: float, battle) -> void:
 			edt *= 0.5
 		e.t += edt
 		if e.is_boss:
-			_tick_boss(e, edt, battle)
+			_tick_boss(e, battle.ts_real if battle.timestop > 0.0 else edt, battle)
 		else:
 			_tick_mob(e, edt, h, battle)
 		if battle.state == "play" and e.pos.distance_squared_to(pp) < (e.radius + 2.0) * (e.radius + 2.0):

@@ -166,27 +166,40 @@ static func boss(e, id: String, dt: float, b) -> void:
 				fan(b, e.pos, (b.player.position - e.pos).angle() + 0.1 * e.tm["z"], 7, 78, 96.0, 2, 1)
 			if every(e, "b", 2.3, dt):
 				ring(b, e.pos, 16, 54.0, randf() * TAU, 0, 6)
-		"saku2":  # The World：飞刀撒满全场 → 时间停止 → 一齐射向自机
-			var c2 := fmod(t, 5.2)
-			if c2 < 2.0:
-				e.tm["stopped"] = false
-				if every(e, "a", 0.07, dt):
+		"saku2":  # The World：撒刀 → 真·时间停止（自机也不能动）→ 布置刀阵 → 时间恢复，一齐飞来
+			var c2 := fmod(t, 6.6)
+			if c2 < 2.2:
+				e.tm["placed"] = 0
+				if every(e, "a", 0.06, dt):
 					b.bullets.add(e.pos, Vector2.from_angle(randf() * TAU) * randf_range(50, 100), 2, 6, "tw")
-			elif c2 < 3.0:
-				if not e.tm.get("stopped", false):
-					e.tm["stopped"] = true
-					Au.sfx("phase", -4.0)
-					for bl in b.bullets.list:
-						if bl.tag == "tw":
-							bl.vel = Vector2.ZERO
-							bl.col = 1
-				if every(e, "b", 0.34, dt):
-					aimed(b, e.pos, 3, 30, 100.0, 0, 0)
+			elif not e.tm.get("stopped", false) and c2 < 2.5:
+				e.tm["stopped"] = true
+				b.timestop = 2.2
+				b.banner = "幻世「The World」"
+				b.banner_t = 1.2
+				Au.sfx("phase")
+				for bl in b.bullets.list:
+					if bl.tag == "tw":
+						bl.vel = Vector2.ZERO
+						bl.col = 1
+			elif e.tm.get("stopped", false) and b.timestop > 0.0:
+				# 时停中：围绕自机布置四圈飞刀，每圈留一个缺口
+				var k: int = e.tm.get("placed", 0)
+				if k < 4 and every(e, "ring", 0.4, dt):
+					e.tm["placed"] = k + 1
+					var rad := 44.0 + k * 11.0
+					var gap := randi() % 10
+					var off := randf() * TAU
+					for i in 10:
+						if i == gap or i == (gap + 1) % 10:
+							continue
+						var a := off + TAU * i / 10.0
+						b.bullets.add(b.player.position + Vector2.from_angle(a) * rad, Vector2.ZERO, 2, 1, "tw")
 			elif e.tm.get("stopped", false):
 				e.tm["stopped"] = false
 				for bl in b.bullets.list:
 					if bl.tag == "tw":
-						bl.vel = ((b.player.position - bl.pos).normalized().rotated(randf_range(-0.35, 0.35))) * randf_range(60, 84) * G.DIFF_SPEED
+						bl.vel = (b.player.position - bl.pos).normalized().rotated(randf_range(-0.12, 0.12)) * 62.0 * G.DIFF_SPEED
 						bl.tag = ""
 		"saku3":
 			if every(e, "a", 1.15, dt):

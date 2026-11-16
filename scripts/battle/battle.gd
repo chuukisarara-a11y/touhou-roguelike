@@ -32,6 +32,9 @@ var banner_t := 0.0
 var move_finger := -1
 var slow_budget := SLOW_MAX
 var slowmo_active := false
+var timestop := 0.0      # 时间停止剩余秒数（咲夜）：期间除 Boss 外一切静止，自机不能动
+var ts_real := 0.0
+var _ts: ColorRect
 var _dim: ColorRect
 var _bt := 0.0
 
@@ -54,6 +57,11 @@ func _ready() -> void:
 	_dim.size = Vector2(G.FIELD_W, field_h)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_dim)
+	_ts = ColorRect.new()
+	_ts.color = Color(0.55, 0.5, 0.75, 0.0)
+	_ts.size = Vector2(G.FIELD_W, field_h)
+	_ts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_ts)
 	hud = Hud.new(); add_child(hud); hud.setup(self)
 	var hp_mult: float = (1.0 + (G.run.floor - 1) * 0.07) * pow(1.55, G.run.chapter - 1)
 	waves = Waves.build(G.run.chapter, G.run.floor, kind)
@@ -82,6 +90,11 @@ func _input(ev: InputEvent) -> void:
 func _process(real_dt: float) -> void:
 	real_dt = minf(real_dt, 0.05)
 	slowmo_active = false
+	ts_real = real_dt
+	_ts.color.a = move_toward(_ts.color.a, 0.32 if timestop > 0.0 else 0.0, real_dt * 2.5)
+	if timestop > 0.0:
+		_tick_timestop(real_dt)
+		return
 	if G.touch_mode and state == "play":
 		if move_finger == -1 and slow_budget > 0.0:
 			slowmo_active = true
@@ -122,6 +135,16 @@ func _process(real_dt: float) -> void:
 				G.main.battle_done({"kind": kind, "no_hit": hits == 0, "earned": earned})
 			else:
 				G.main.game_over()
+
+## 时间停止：只有 Boss 在动（布置飞刀），其余全部冻结；自机不能移动也不能射击
+func _tick_timestop(real_dt: float) -> void:
+	timestop -= real_dt
+	player.touch_delta = Vector2.ZERO
+	enemies.tick(0.0, self)
+	bullets.queue_redraw()
+	fx.tick(real_dt * 0.3)
+	banner_t -= real_dt
+	hud.tick()
 
 func _tick_waves(dt: float) -> void:
 	wave_t += dt

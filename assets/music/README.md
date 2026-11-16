@@ -13,5 +13,7 @@
 
 之后的章节依次是 battle2 / boss2、battle3 / boss3、battle4 / boss4。
 
-生成方法：`python3 tools/arrange.py 旋律.mid battle1 --style stage`
+8bit 版（当前采用）：`python3 tools/chiptune.py assets/music/src/<名字>.mid <槽位> --sections "起始小节:调:强度,..."`，参数说明见脚本开头。
+
+GM 乐器版：`python3 tools/arrange.py 旋律.mid battle1 --style stage`
 风格：stage（道中，小号+钢琴+摇滚鼓）、boss（合成主音+小号+快鼓）、calm（钢琴+长笛，轻打击）。
