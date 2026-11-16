@@ -179,6 +179,7 @@ class Overlay extends CanvasLayer:
 	var _h := 356.0
 	func _init(title: String, height := 220.0) -> void:
 		layer = 20
+		add_to_group("overlay")
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		_h = G.field_h()
 		var dim := ColorRect.new()
@@ -259,3 +260,63 @@ static func confirm(parent: Node, text: String, yes: Callable) -> void:
 	ov.add_button("确定", func():
 		ov.close(); yes.call())
 	ov.add_button("取消", func(): ov.close())
+
+# ---------------------------------------------------------------- 滚动区域
+## 自己处理触摸拖动的滚动区域（自带惯性）。内容放进 content；
+## 可点击的格子用 add_tap(区域, 回调) 注册：手指几乎没移动才算点击，拖动不会误触。
+class Scroll extends Control:
+	var content: Control
+	var taps := []
+	var content_h := 0.0
+	var _press := false
+	var _moved := 0.0
+	var _vel := 0.0
+	func _init(pos: Vector2, sz: Vector2) -> void:
+		position = pos
+		size = sz
+		clip_contents = true
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content = Control.new()
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(content)
+	func add_tap(r: Rect2, cb: Callable) -> void:
+		taps.append([r, cb])
+	func _max_scroll() -> float:
+		return maxf(0.0, content_h - size.y)
+	func scroll_by(dy: float) -> void:
+		content.position.y = clampf(content.position.y + dy, -_max_scroll(), 0.0)
+	func _blocked() -> bool:
+		return not get_tree().get_nodes_in_group("overlay").is_empty()
+	func _input(ev: InputEvent) -> void:
+		if not is_visible_in_tree() or _blocked():
+			_press = false
+			return
+		if ev is InputEventScreenTouch:
+			if ev.pressed and get_global_rect().has_point(ev.position):
+				_press = true
+				_moved = 0.0
+				_vel = 0.0
+			elif not ev.pressed and _press:
+				_press = false
+				if _moved < 8.0:
+					_tap(ev.position)
+		elif ev is InputEventScreenDrag and _press:
+			_moved += ev.relative.length()
+			scroll_by(ev.relative.y)
+			_vel = ev.relative.y * 60.0
+		elif ev is InputEventMouseButton and ev.pressed and get_global_rect().has_point(ev.position):
+			if ev.button_index == MOUSE_BUTTON_WHEEL_UP:
+				scroll_by(30.0)
+			elif ev.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				scroll_by(-30.0)
+	func _process(dt: float) -> void:
+		if not _press and absf(_vel) > 5.0:
+			scroll_by(_vel * dt)
+			_vel = move_toward(_vel, 0.0, 900.0 * dt)
+	func _tap(p: Vector2) -> void:
+		var local := p - global_position - content.position
+		for t in taps:
+			if t[0].has_point(local):
+				Au.sfx("click")
+				t[1].call()
+				return

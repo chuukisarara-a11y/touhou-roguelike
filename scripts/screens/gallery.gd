@@ -1,5 +1,5 @@
 extends Node2D
-## 立绘鉴赏：见过的角色才会显示，点开看大图和介绍。
+## 立绘鉴赏：见过的角色才会显示，点开看大图和介绍。可上下拖动。
 
 func _ready() -> void:
 	var h := G.field_h()
@@ -9,46 +9,35 @@ func _ready() -> void:
 		if G.meta.seen.get(id, false):
 			n += 1
 	UI.label(self, "立绘鉴赏　%d / %d" % [n, UI.GALLERY.size()], 8, 12, Color(1, 0.85, 0.55))
-	var sc := ScrollContainer.new()
-	sc.position = Vector2(0, 28)
-	sc.size = Vector2(G.FIELD_W, h - 28 - 34)
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var sc := UI.Scroll.new(Vector2(0, 28), Vector2(G.FIELD_W, h - 28 - 34))
 	add_child(sc)
-	var content := Control.new()
-	sc.add_child(content)
 	var i := 0
 	for id in UI.GALLERY:
 		var seen: bool = G.meta.seen.get(id, false)
 		var cx := 6 + (i % 3) * 64
 		var cy := (i / 3) * 92
-		var b := Button.new()
-		b.flat = true
-		b.position = Vector2(cx, cy)
-		b.size = Vector2(60, 88)
-		b.focus_mode = Control.FOCUS_NONE
-		b.disabled = not seen
-		var cid: String = id
-		b.pressed.connect(func(): _show(cid))
-		content.add_child(b)
 		var frame := ColorRect.new()
 		frame.color = Color(0.16, 0.12, 0.3, 0.9)
+		frame.position = Vector2(cx, cy)
 		frame.size = Vector2(60, 74)
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(frame)
+		sc.content.add_child(frame)
 		var tr := TextureRect.new()
 		tr.texture = G.tex("p_" + id)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tr.position = Vector2(1, 1)
+		tr.position = Vector2(cx + 1, cy + 1)
 		tr.size = Vector2(58, 72)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.modulate = Color.WHITE if seen else Color(0, 0, 0, 0.85)
-		b.add_child(tr)
-		var l := UI.label(b, UI.GALLERY[id][0] if seen else "？？？", 74, 12, Color(0.92, 0.9, 1.0), 0, 60)
+		sc.content.add_child(tr)
+		var l := UI.label(sc.content, UI.GALLERY[id][0] if seen else "？？？", cy + 74, 12, Color(0.92, 0.9, 1.0), cx, 60)
 		l.clip_text = true
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if seen:
+			var cid: String = id
+			sc.add_tap(Rect2(cx, cy, 60, 88), func(): _show(cid))
 		i += 1
-	content.custom_minimum_size = Vector2(G.FIELD_W, ceilf(i / 3.0) * 92)
+	sc.content_h = ceilf(i / 3.0) * 92
 	UI.button(self, "返回", h - 30, func(): G.main.goto("title"), 24.0)
 
 func _show(id: String) -> void:
