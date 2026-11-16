@@ -11,6 +11,8 @@ const SCREENS := {
 	"rest": "res://scripts/screens/rest.gd",
 	"result": "res://scripts/screens/result.gd",
 	"talk": "res://scripts/screens/talk.gd",
+	"gallery": "res://scripts/screens/gallery.gd",
+	"assets": "res://scripts/screens/assets.gd",
 }
 
 var screen: Node
@@ -31,6 +33,8 @@ func _ready() -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
 	goto("title")
+	if OS.get_cmdline_user_args().has("--uitest"):
+		add_child(load("res://tools/uitest.gd").new())
 
 func goto(name: String, arg := {}) -> void:
 	if screen != null:
@@ -38,6 +42,10 @@ func goto(name: String, arg := {}) -> void:
 	screen = Node2D.new()
 	screen.set_script(load(SCREENS[name]))
 	screen_name = name
+	if name in ["map", "battle", "reward", "shop", "event", "rest", "talk"]:
+		G.save_run(name, arg)
+	elif name == "result":
+		G.clear_run()
 	_pick_bgm(name, arg)
 	if screen.has_method("setup"):
 		screen.setup(arg)
@@ -49,7 +57,7 @@ func goto(name: String, arg := {}) -> void:
 ## 各界面对应的 BGM 槽位（文件放在 assets/music/ 下，缺文件则静音）
 func _pick_bgm(name: String, arg: Dictionary) -> void:
 	match name:
-		"title":
+		"title", "gallery", "assets":
 			Au.bgm("title")
 		"talk":
 			Au.bgm("")
@@ -62,8 +70,44 @@ func _pick_bgm(name: String, arg: Dictionary) -> void:
 			Au.bgm("map")
 
 func start_run() -> void:
+	G.clear_run()
 	G.new_run()
+	G.meta.runs += 1
+	G.save_meta()
 	goto("map")
+
+func continue_run() -> void:
+	if G.load_run():
+		goto(G.resume.screen, G.resume.arg)
+	else:
+		goto("title")
+
+## 开发者：从第 n 章开头开始，并给一套像样的构筑
+func dev_start_chapter(n: int) -> void:
+	G.new_run()
+	var ids := ["amulet", "needle", "laser", "yinyang"]
+	G.run.weapons = []
+	for id in ids:
+		G.run.weapons.append({"id": id, "lv": mini(3, n + 1), "cd": 0.0})
+	G.run.money = 150 * n
+	for i in range(1, n):
+		G.next_chapter()
+		G.run.shards = mini(3, n - 1)
+	goto("map")
+
+## 开发者：直接打某个 Boss / 精英
+func dev_fight(boss_id: String) -> void:
+	var ch := 1
+	for c in Db.CHAPTERS:
+		if Db.CHAPTERS[c].boss == boss_id or Db.CHAPTERS[c].elites.has(boss_id):
+			ch = c
+	dev_start_chapter(ch)
+	G.run.floor = 8
+	G.run.pos = G.run.map.size() - 1
+	if Db.TALKS.has(boss_id):
+		goto("talk", {"boss": boss_id})
+	else:
+		goto("battle", {"kind": "elite", "boss": boss_id})
 
 func enter_node(i: int) -> void:
 	var run: Dictionary = G.run
@@ -78,6 +122,7 @@ func enter_node(i: int) -> void:
 				battle_done({"kind": "battle", "no_hit": false, "earned": 25, "skipped": true})
 			elif node.type == "boss":
 				goto("talk", {"boss": Db.CHAPTERS[run.chapter].boss})
+				return
 			else:
 				goto("battle", {"kind": node.type})
 		_:
@@ -112,3 +157,11 @@ func node_done() -> void:
 
 func game_over() -> void:
 	goto("result", {"win": false})
+
+## Android 返回键 / 切到后台：存档已在进入界面时写好，这里只保存设置
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		G.save_meta()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if screen != null and screen.has_method("on_back"):
+			screen.on_back()

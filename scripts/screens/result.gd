@@ -7,6 +7,9 @@ var true_end := false
 func setup(arg: Dictionary) -> void:
 	win = arg.get("win", false)
 	true_end = arg.get("true_end", false)
+	if win and not G.bot:
+		G.meta.wins += 1
+		G.save_meta()
 
 func _ready() -> void:
 	var h := G.field_h()

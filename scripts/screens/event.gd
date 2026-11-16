@@ -15,6 +15,10 @@ func _ready() -> void:
 	UI.status(self)
 	ev = Db.EVENTS[G.rng.randi_range(0, Db.EVENTS.size() - 1)]
 	UI.picture(self, ev.art, 22)
+	if ev.art == "ev_kappa":
+		G.see("nitori")
+	elif ev.art == "ev_kourin":
+		G.see("rinnosuke")
 	UI.label(self, ev.title, 90, 12, Color(0.7, 1.0, 0.75))
 	_talk = ev.get("talk", [])
 	_line = UI.label(self, "", 108, 12, Color(0.92, 0.92, 1.0), 10)

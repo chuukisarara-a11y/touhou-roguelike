@@ -18,6 +18,14 @@ var rng := RandomNumberGenerator.new()
 var font: Font
 var _tex := {}
 
+# ---------- 常驻数据（设置、立绘解锁、开发者模式）与局内存档 ----------
+const META_PATH := "user://meta.dat"
+const RUN_PATH := "user://run.dat"
+const DEV_PASS := "gensokyo"   # 开发者模式口令（标题画面点月亮输入）
+var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "dev": false, "runs": 0, "wins": 0}
+var dev_god := false     # 开发者：无敌
+var resume := {}         # 读档后要回到的界面 {"screen", "arg"}
+
 func _ready() -> void:
 	_add_keys("move_left", [KEY_LEFT, KEY_A])
 	_add_keys("move_right", [KEY_RIGHT, KEY_D])
@@ -29,6 +37,7 @@ func _ready() -> void:
 	bot = OS.get_cmdline_user_args().has("--autotest")
 	font = load("res://assets/fonts/fusion12.ttf")
 	rng.randomize()
+	load_meta()
 
 func _add_keys(action: String, keys: Array) -> void:
 	if not InputMap.has_action(action):
@@ -55,6 +64,59 @@ func tex(n: String, raw := false) -> Texture2D:
 			it.set_size_override(Vector2i(src.get_width() / sc, src.get_height() / sc))
 			_tex[key] = it
 	return _tex[key]
+
+func load_meta() -> void:
+	if not FileAccess.file_exists(META_PATH):
+		return
+	var f := FileAccess.open(META_PATH, FileAccess.READ)
+	if f == null:
+		return
+	var d = f.get_var()
+	if d is Dictionary:
+		for k in d:
+			if meta.has(k) and meta[k] is Dictionary and d[k] is Dictionary:
+				meta[k].merge(d[k], true)
+			else:
+				meta[k] = d[k]
+
+func save_meta() -> void:
+	var f := FileAccess.open(META_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_var(meta)
+
+func see(id: String) -> void:
+	if not meta.seen.get(id, false):
+		meta.seen[id] = true
+		save_meta()
+
+func has_save() -> bool:
+	return FileAccess.file_exists(RUN_PATH)
+
+## 进入每个界面时自动存档：保存「进入这个界面之前」的状态与界面名。
+## 中途退出后读档，会从这个界面的开头重来（战斗从头打，商店重新进货）。
+func save_run(screen: String, arg: Dictionary) -> void:
+	if run.is_empty() or bot:
+		return
+	var f := FileAccess.open(RUN_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_var({"run": run, "screen": screen, "arg": arg, "ver": 1})
+
+func load_run() -> bool:
+	if not has_save():
+		return false
+	var f := FileAccess.open(RUN_PATH, FileAccess.READ)
+	if f == null:
+		return false
+	var d = f.get_var()
+	if not (d is Dictionary) or not d.has("run"):
+		return false
+	run = d.run
+	resume = {"screen": d.get("screen", "map"), "arg": d.get("arg", {})}
+	return true
+
+func clear_run() -> void:
+	if has_save():
+		DirAccess.remove_absolute(RUN_PATH)
 
 # ---------- 本局状态 ----------
 

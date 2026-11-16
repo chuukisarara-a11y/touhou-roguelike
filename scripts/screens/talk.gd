@@ -23,6 +23,7 @@ func setup(arg: Dictionary) -> void:
 
 func _ready() -> void:
 	h = G.field_h()
+	G.see(Db.BOSSES[boss_id].tex.trim_prefix("c_"))
 	var bg := UI.backdrop(self)
 	bg.mode = Db.CHAPTERS[G.run.chapter].bg
 	var py := h - 96 - 118

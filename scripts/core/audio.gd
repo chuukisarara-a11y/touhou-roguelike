@@ -13,12 +13,21 @@ var _cache := {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	call_deferred("apply_volume")
 	_bgm = AudioStreamPlayer.new()
 	add_child(_bgm)
 	for i in 12:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_pool.append(p)
+
+## 按设置里的 0~10 档计算音量（0 档静音）
+func apply_volume() -> void:
+	var st: Dictionary = G.meta.settings
+	bgm_db = -80.0 if st.bgm == 0 else linear_to_db(st.bgm / 10.0) - 9.0
+	sfx_db = -80.0 if st.sfx == 0 else linear_to_db(st.sfx / 10.0) - 6.0
+	if _bgm != null and _bgm.playing:
+		_bgm.volume_db = bgm_db
 
 ## 播放某个槽位的 BGM；名字相同则不打断。找不到文件时淡出为静音。
 func bgm(name: String) -> void:

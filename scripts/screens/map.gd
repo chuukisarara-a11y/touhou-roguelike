@@ -16,7 +16,7 @@ func _ready() -> void:
 	h = G.field_h()
 	UI.backdrop(self)
 	UI.status(self)
-	UI.label(self, Db.CHAPTERS[G.run.chapter].name, 2, 12, Color(0.85, 0.8, 1.0))
+	UI.label(self, Db.CHAPTERS[G.run.chapter].name, 2, 12, Color(0.85, 0.8, 1.0), 52, 84)
 	_info = UI.label(self, "", h - 44, 12, Color(0.8, 0.8, 0.92), 4)
 	var ws := []
 	for w in G.run.weapons:
@@ -37,6 +37,18 @@ func _ready() -> void:
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_info.size.y = UI.text_h(_info.text, G.FIELD_W - 8.0)
 	_info.position.y = h - 4 - _info.size.y
+	if G.meta.dev:
+		Dev.map_tools(self, _info.position.y - 22)
+
+func _menu() -> void:
+	var ov := UI.Overlay.new("菜单", 128.0)
+	add_child(ov)
+	ov.add_button("继续", func(): ov.close(), 28.0)
+	ov.add_button("设置", func(): UI.open_settings(ov))
+	ov.add_button("保存并退出", func(): G.main.goto("title"))
+
+func on_back() -> void:
+	_menu()
 
 func node_pos(n: Dictionary) -> Vector2:
 	var top := 34.0
@@ -61,7 +73,13 @@ func _process(dt: float) -> void:
 	queue_redraw()
 
 func _unhandled_input(ev: InputEvent) -> void:
+	if ev is InputEventKey and ev.pressed and ev.keycode == KEY_ESCAPE:
+		_menu()
+		return
 	if ev is InputEventScreenTouch and ev.pressed:
+		if Rect2(G.FIELD_W - 26, 0, 26, 24).has_point(ev.position):
+			_menu()
+			return
 		for i in reachable():
 			if node_pos(G.run.map[i]).distance_to(ev.position) < 17.0:
 				Au.sfx("select")
@@ -69,6 +87,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 				return
 
 func _draw() -> void:
+	draw_rect(Rect2(G.FIELD_W - 19, 3, 16, 14), Color(0, 0, 0, 0.35))
+	for i in 3:
+		draw_rect(Rect2(G.FIELD_W - 16, 6 + i * 3, 10, 2), Color(1, 1, 1, 0.85))
 	var m: Array = G.run.map
 	var reach := reachable()
 	for i in m.size():

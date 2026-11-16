@@ -6,6 +6,8 @@ const SLOW_SCALE := 0.3
 
 var field_h := 356.0
 var kind := "battle"
+var boss_override := ""
+var _paused_ov: CanvasLayer
 var bg: Background
 var enemies: EnemyLayer
 var shots: ShotLayer
@@ -40,6 +42,7 @@ var _bt := 0.0
 
 func setup(arg: Dictionary) -> void:
 	kind = arg.get("kind", "battle")
+	boss_override = arg.get("boss", "")
 
 func _ready() -> void:
 	field_h = G.field_h()
@@ -65,6 +68,8 @@ func _ready() -> void:
 	hud = Hud.new(); add_child(hud); hud.setup(self)
 	var hp_mult: float = (1.0 + (G.run.floor - 1) * 0.07) * pow(1.55, G.run.chapter - 1)
 	waves = Waves.build(G.run.chapter, G.run.floor, kind)
+	if boss_override != "":
+		waves = [[{"t": 0.0, "boss": boss_override}]]
 	set_meta("hp_mult", hp_mult)
 	_next_wave()
 
@@ -74,8 +79,14 @@ func _next_wave() -> void:
 	pending = waves[wave_i].duplicate()
 
 func _input(ev: InputEvent) -> void:
+	if ev is InputEventKey and ev.pressed and ev.keycode in [KEY_ESCAPE, KEY_P]:
+		pause()
+		return
 	if ev is InputEventScreenTouch:
 		if ev.pressed:
+			if Rect2(G.FIELD_W - 26, 0, 26, 24).has_point(ev.position):
+				pause()
+				return
 			if hud.bomb_rect.grow(6).has_point(ev.position):
 				use_bomb()
 			elif move_finger == -1:
@@ -95,7 +106,7 @@ func _process(real_dt: float) -> void:
 	if timestop > 0.0:
 		_tick_timestop(real_dt)
 		return
-	if G.touch_mode and state == "play":
+	if G.touch_mode and state == "play" and G.meta.settings.slowmo:
 		if move_finger == -1 and slow_budget > 0.0:
 			slowmo_active = true
 			slow_budget -= real_dt
@@ -122,7 +133,7 @@ func _process(real_dt: float) -> void:
 	banner_t -= real_dt
 	if shake > 0.0:
 		shake -= real_dt
-		position = Vector2(randf_range(-2, 2), randf_range(-2, 2)) if shake > 0.0 else Vector2.ZERO
+		position = Vector2(randf_range(-2, 2), randf_range(-2, 2)) if (shake > 0.0 and G.meta.settings.shake) else Vector2.ZERO
 	hud.tick()
 	if state != "play":
 		end_t -= real_dt
@@ -137,6 +148,38 @@ func _process(real_dt: float) -> void:
 				G.main.game_over()
 
 ## 时间停止：只有 Boss 在动（布置飞刀），其余全部冻结；自机不能移动也不能射击
+## 暂停：冻结整棵场景树，只有暂停菜单在动
+func pause() -> void:
+	if get_tree().paused or state != "play" or G.bot:
+		return
+	get_tree().paused = true
+	move_finger = -1
+	var ov := UI.Overlay.new("暂停", 150.0)
+	add_child(ov)
+	_paused_ov = ov
+	ov.add_button("继续", unpause, 28.0)
+	ov.add_button("设置", func(): UI.open_settings(ov))
+	ov.add_button("保存并退出", func():
+		get_tree().paused = false
+		G.main.goto("title"))
+	ov.add_label("※ 下次继续时，这场战斗从头开始", Color(0.65, 0.65, 0.8))
+
+func unpause() -> void:
+	if _paused_ov != null:
+		_paused_ov.queue_free()
+		_paused_ov = null
+	get_tree().paused = false
+
+func on_back() -> void:
+	if get_tree().paused:
+		unpause()
+	else:
+		pause()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		pause()
+
 func _tick_timestop(real_dt: float) -> void:
 	timestop -= real_dt
 	player.touch_delta = Vector2.ZERO
@@ -153,6 +196,7 @@ func _tick_waves(dt: float) -> void:
 		var s: Dictionary = pending.pop_front()
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
+			G.see(Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			hud.cutin("p_" + Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			Au.sfx("warn")
 		else:
@@ -222,7 +266,7 @@ func player_hit() -> void:
 	player.invuln = 2.0 + (1.0 if G.has("camo") else 0.0)
 	if G.has("lantern"):
 		G.run.bomb = 1.0
-	if G.bot:
+	if G.bot or G.dev_god:
 		return
 	if G.run.shield > 0:
 		G.run.shield -= 1

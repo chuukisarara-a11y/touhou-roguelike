@@ -11,6 +11,7 @@ func _ready() -> void:
 	UI.backdrop(self)
 	UI.status(self)
 	UI.label(self, "香霖堂", 22, 12, Color(1, 0.85, 0.5))
+	G.see("rinnosuke")
 	var rs := Sprite2D.new()
 	rs.texture = G.tex("c_rinnosuke")
 	rs.position = Vector2(G.FIELD_W / 2 + 36, 22)

@@ -33,8 +33,12 @@ func _draw() -> void:
 	var he := G.tex("heart_empty")
 	for i in run.max_hearts:
 		draw_texture(h if i < run.hearts else he, Vector2(4 + i * 10, 4))
-	draw_texture(G.tex("coin"), Vector2(G.FIELD_W - 44, 6))
-	draw_string(f, Vector2(G.FIELD_W - 36, 15), str(run.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.9, 0.5))
+	draw_texture(G.tex("coin"), Vector2(G.FIELD_W - 62, 6))
+	draw_string(f, Vector2(G.FIELD_W - 54, 15), str(run.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.9, 0.5))
+	# 暂停键
+	draw_rect(Rect2(G.FIELD_W - 19, 3, 16, 14), Color(0, 0, 0, 0.35))
+	draw_rect(Rect2(G.FIELD_W - 15, 6, 3, 8), Color(1, 1, 1, 0.85))
+	draw_rect(Rect2(G.FIELD_W - 10, 6, 3, 8), Color(1, 1, 1, 0.85))
 	var boss = battle.boss
 	if boss != null and not boss.dead:
 		var w := G.FIELD_W - 16.0
