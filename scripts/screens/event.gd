@@ -4,14 +4,17 @@ extends Node2D
 var ev := {}
 var _buttons := []
 var _done := false
+var _res_y := 150.0
 
 func _ready() -> void:
 	UI.backdrop(self)
 	UI.status(self)
 	ev = Db.EVENTS[G.rng.randi_range(0, Db.EVENTS.size() - 1)]
-	UI.label(self, ev.title, 26, 12, Color(0.7, 1.0, 0.75))
-	var l := UI.label(self, ev.text, 48, 12, Color(0.92, 0.92, 1.0), 10)
-	var y: float = 60 + l.size.y
+	UI.picture(self, ev.art, 22)
+	UI.label(self, ev.title, 90, 12, Color(0.7, 1.0, 0.75))
+	var l := UI.label(self, ev.text, 108, 12, Color(0.92, 0.92, 1.0), 10)
+	var y: float = 116 + l.size.y
+	_res_y = y
 	for ch in ev.choices:
 		var b := UI.button(self, ch.text, y, func(): _choose(ch), 30.0, true)
 		if ch.has("cost") and G.run.money < ch.cost:
@@ -69,8 +72,8 @@ func _choose(ch: Dictionary) -> void:
 	for b in _buttons:
 		b.queue_free()
 	_buttons.clear()
-	var l := UI.label(self, "\n".join(lines), 130, 12, Color(1, 0.95, 0.7), 10)
-	UI.button(self, "继续", 140 + l.size.y, func(): G.main.node_done(), 26.0)
+	var l := UI.label(self, "\n".join(lines), _res_y, 12, Color(1, 0.95, 0.7), 10)
+	UI.button(self, "继续", _res_y + 10 + l.size.y, func(): G.main.node_done(), 26.0)
 
 func bot_step() -> void:
 	if _done:

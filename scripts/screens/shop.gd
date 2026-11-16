@@ -8,13 +8,17 @@ func _ready() -> void:
 	UI.backdrop(self)
 	UI.status(self)
 	UI.label(self, "香霖堂", 22, 12, Color(1, 0.85, 0.5))
-	var y := 38.0
+	var rs := Sprite2D.new()
+	rs.texture = G.tex("rinnosuke")
+	rs.position = Vector2(G.FIELD_W / 2 + 34, 24)
+	add_child(rs)
+	var y := 42.0
 	var disc := 0.7 if G.has("member") else 1.0
 	for c in G.roll_cards(2):
 		if c.kind == "money":
 			continue
 		var price := int((70 if c.kind == "new" else (60 if G.weapon(c.id).lv == 1 else 90)) * disc)
-		y += _add(G.card_text(c), price, y, func(): G.apply_card(c))
+		y += _add(G.card_text(c), price, y, func(): G.apply_card(c), 36.0, false, G.card_icon(c))
 	var picked := []
 	for i in 2:
 		var rid := G.roll_relic(0, 2, picked)
@@ -22,14 +26,14 @@ func _ready() -> void:
 			continue
 		picked.append(rid)
 		var price2 := int([80, 130, 180][Db.RELICS[rid].rar] * disc)
-		y += _add(G.relic_text(rid), price2, y, func(): G.add_relic(rid))
+		y += _add(G.relic_text(rid), price2, y, func(): G.add_relic(rid), 36.0, false, G.relic_icon(rid))
 	y += _add("回复 1 心", int(30 * disc), y, func(): G.heal(1), 24.0, true)
 	UI.button(self, "离开", y, func(): G.main.node_done(), 24.0)
 	_refresh()
 
-func _add(text: String, price: int, y: float, effect: Callable, h := 36.0, repeat := false) -> float:
+func _add(text: String, price: int, y: float, effect: Callable, h := 36.0, repeat := false, icon := {}) -> float:
 	var entry := []
-	var b := UI.button(self, text if not repeat else "%s（%d 钱）" % [text, price], y, func(): _buy(entry), h, not repeat)
+	var b := UI.button(self, text if not repeat else "%s（%d 钱）" % [text, price], y, func(): _buy(entry), h, not repeat, icon)
 	if not repeat:
 		var pl := Label.new()
 		pl.text = "%d钱" % price
@@ -56,8 +60,8 @@ func _buy(entry: Array) -> void:
 	if not entry[3]:
 		entry[4] = true
 		UI.set_text(entry[0], "已售出")
-		if entry[0].get_child_count() > 1:
-			entry[0].get_child(1).queue_free()
+		for i in range(1, entry[0].get_child_count()):
+			entry[0].get_child(i).queue_free()
 	_refresh()
 
 func _refresh() -> void:

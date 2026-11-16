@@ -41,6 +41,7 @@ func setup(arg: Dictionary) -> void:
 func _ready() -> void:
 	field_h = G.field_h()
 	bg = Background.new(); add_child(bg); bg.setup(field_h)
+	bg.mode = "lake"
 	enemies = EnemyLayer.new(); add_child(enemies)
 	items = ItemLayer.new(); add_child(items)
 	shots = ShotLayer.new(); add_child(shots)
@@ -129,6 +130,7 @@ func _tick_waves(dt: float) -> void:
 		var s: Dictionary = pending.pop_front()
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
+			hud.cutin(Db.BOSSES[s.boss].tex + ("_0" if Db.BOSSES[s.boss].get("anim", false) else ""))
 		else:
 			enemies.spawn(s.kind, s.move, hp_mult)
 	if pending.is_empty() and enemies.alive() == 0:
@@ -175,6 +177,7 @@ func on_enemy_killed(e) -> void:
 			fx.text(player.position + Vector2(0, -14), "+1 心", Color(1, 0.5, 0.6))
 
 func on_boss_phase(e) -> void:
+	hud.cutin(e.def.tex + ("_0" if e.def.get("anim", false) else ""))
 	bullets.clear_all(fx)
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
 	items.drop_coins(e.pos, 8)

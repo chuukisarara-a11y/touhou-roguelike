@@ -14,6 +14,7 @@ class Bullet:
 	var tag := ""
 
 const RADII := [2.5, 5.0, 2.0]
+const SPEED_MULT := 1.1   # 全局弹速系数（难度微调用）
 var list := []
 var _atlas: Texture2D
 
@@ -22,7 +23,7 @@ func _ready() -> void:
 
 func add(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
 	var b := Bullet.new()
-	b.pos = pos; b.vel = vel; b.shape = shape; b.col = col; b.tag = tag
+	b.pos = pos; b.vel = vel * SPEED_MULT; b.shape = shape; b.col = col; b.tag = tag
 	b.r = RADII[shape]
 	if list.size() < 700:
 		list.append(b)

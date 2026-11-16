@@ -99,13 +99,20 @@ static func fire(w: Dictionary, p: Player, b) -> float:
 				s.spawn("moon", pos + Vector2(0, -6), Vector2.from_angle(a5) * 200.0, 6.0 * m * mult, {"curve": randf_range(-1.6, 1.6), "radius": 5.0 if mult < 5.0 else 8.0})
 			return 0.28
 		"rift":
-			var n9 := 1 if lv < 2 else 2
-			var d3 := 5.0 * m * (1.5 if lv >= 3 else 1.0)
-			for i in n9:
-				var off3 := 0.0 if n9 == 1 else (i * 2 - 1) * 5.0
-				s.spawn("orb", pos + Vector2(off3, -8), Vector2(off3 * 8.0, -280.0), d3, {"wrap": true})
-				s.spawn("orb", pos + Vector2(off3, 8), Vector2(off3 * 8.0, 280.0), d3, {"wrap": true})
-			return 0.22
+			var alive2: Array = b.enemies.list.filter(func(e): return not e.dead and e.pos.y > 4)
+			if alive2.is_empty():
+				return 0.3
+			var d3 := 6.0 * m * (1.5 if lv >= 3 else 1.0)
+			for i in (1 if lv < 2 else 2):
+				var e3 = alive2[randi() % alive2.size()]
+				var side3 := -1.0 if randf() < 0.5 else 1.0
+				var gp: Vector2 = e3.pos + Vector2(side3 * (e3.radius + 14.0), randf_range(-6, 6))
+				gp.x = clampf(gp.x, 8.0, G.FIELD_W - 8.0)
+				s.gaps.append([gp, 0.45])
+				var dir3: Vector2 = (e3.pos - gp).normalized()
+				for k in 3:
+					s.spawn("gapshot", gp - dir3 * (k * 5.0), dir3 * 190.0, d3, {"rot": true, "life": 1.2})
+			return 0.55
 	return 1.0
 
 ## 星图：击破计数，满了降下流星雨

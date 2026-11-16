@@ -54,7 +54,7 @@ func _show_relics(y: float) -> void:
 		var cb := func():
 			G.add_relic(rid)
 			G.main.node_done()
-		var b := UI.button(self, G.relic_text(rid), y, cb, 36.0, true)
+		var b := UI.button(self, G.relic_text(rid), y, cb, 36.0, true, G.relic_icon(rid))
 		_nodes.append(b)
 		_choices.append(cb)
 		y += b.size.y + 4
@@ -68,7 +68,7 @@ func _show_cards(y: float) -> void:
 		var cb := func():
 			G.apply_card(c)
 			G.main.node_done()
-		var b := UI.button(self, G.card_text(c), y, cb, 36.0, true)
+		var b := UI.button(self, G.card_text(c), y, cb, 36.0, true, G.card_icon(c))
 		_nodes.append(b)
 		_choices.append(cb)
 		y += b.size.y + 4

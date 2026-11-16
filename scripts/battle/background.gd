@@ -6,6 +6,7 @@ var stars := []
 var scroll := 0.0
 var h := 356.0
 var auto := false  # 菜单界面用：自己滚动
+var mode := "stars"  # stars / lake
 
 func setup(height: float) -> void:
 	h = height
@@ -23,6 +24,20 @@ func tick(dt: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	if mode == "lake":
+		var t := G.tex("bg_lake")
+		var off := fposmod(scroll * 22.0, 256.0)
+		var y := off - 256.0
+		while y < h:
+			draw_texture(t, Vector2(0, roundf(y)))
+			y += 256.0
+		var m := G.tex("mist")
+		for i in 5:
+			var mx := fposmod(i * 71.0 + scroll * (5.0 + i * 2.0), G.FIELD_W + 192.0) - 192.0
+			var my := fposmod(i * 97.0 + scroll * 30.0, h + 48.0) - 48.0
+			draw_texture_rect(m, Rect2(roundf(mx), roundf(my), 192, 48), false)
+		draw_rect(Rect2(0, 0, G.FIELD_W, 50), Color(0.04, 0.03, 0.1, 0.35))
+		return
 	var bands := 12
 	for i in bands:
 		var k := float(i) / bands

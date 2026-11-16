@@ -25,6 +25,10 @@ class Shot:
 
 var list := []
 var zones := []   # 御柱：[x, half_w, delay, dmg, show_t]
+var gaps := []    # 隙间：[pos, life]
+
+func _ready() -> void:
+	modulate = Color(1, 1, 1, 0.82)   # 自机弹略透明，不遮挡敌弹
 var _new := []
 
 func spawn(kind: String, pos: Vector2, vel: Vector2, dmg: float, opts := {}) -> Shot:
@@ -91,6 +95,9 @@ func tick(dt: float, battle) -> void:
 				battle.shake = 0.12
 			z[4] -= dt
 	zones = zones.filter(func(z): return z[4] > 0.0)
+	for g in gaps:
+		g[1] -= dt
+	gaps = gaps.filter(func(g): return g[1] > 0.0)
 	queue_redraw()
 
 func _on_hit(s: Shot, e, battle) -> void:
@@ -141,6 +148,9 @@ func _draw() -> void:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.8, 0.4, 0.12))
 		else:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.85, 0.5, 0.75 * z[4] / 0.25))
+	var gt := G.tex("gap")
+	for g in gaps:
+		draw_texture(gt, (g[0] - gt.get_size() / 2.0).round(), Color(1, 1, 1, minf(1.0, g[1] * 4.0)))
 	for s in list:
 		var t: Texture2D = G.tex(s.kind)
 		var sz := t.get_size()

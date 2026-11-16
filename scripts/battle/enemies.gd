@@ -166,8 +166,13 @@ func _tick_boss(e: Enemy, dt: float, battle) -> void:
 
 func _draw() -> void:
 	for e in list:
-		var t: Texture2D = G.tex(e.def.tex)
+		var tn: String = e.def.tex
+		if e.def.get("anim", false):
+			tn += "_%d" % (int(e.t * 5.0) % 2)
+		var t: Texture2D = G.tex(tn)
 		var p: Vector2 = (e.pos - t.get_size() / 2.0).round()
+		if e.is_boss:
+			p.y += roundf(sin(e.t * 2.5) * 2.0)
 		var c := Color.WHITE
 		if e.flash > 0.0:
 			c = Color(4, 4, 4)

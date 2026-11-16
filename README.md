@@ -4,7 +4,7 @@
 
 - 设计文档：[DESIGN.md](DESIGN.md)
 - 打包：`tools/build.sh Android`（或 `Windows`、`macOS`）
-- 占位美术生成：`python3 tools/gen_sprites.py`
+- 美术生成：`python3 tools/gen_art.py`
 
 本作为东方Project 二次创作，不含任何官方素材。原作：上海爱丽丝幻乐团。
 字体：Fusion Pixel Font（SIL OFL 1.1）。

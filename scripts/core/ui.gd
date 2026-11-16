@@ -50,20 +50,27 @@ static func label(parent: Node, text: String, y: float, size := 12, color := Col
 
 ## 按钮：文字用内嵌 Label 显示（Button 自带的换行宽度不可靠），高度按文字自动撑开。
 ## 调用方用 b.size.y 排版；禁用/改字请用 set_disabled / set_text。
-static func button(parent: Node, text: String, y: float, cb: Callable, h := 26.0, left := false) -> Button:
+static func button(parent: Node, text: String, y: float, cb: Callable, h := 26.0, left := false, icon := {}) -> Button:
 	var b := Button.new()
 	var w := G.FIELD_W - 16.0
-	var th := text_h(text, w - 10.0)
+	var ix := 0.0 if icon.is_empty() else 20.0
+	var th := text_h(text, w - 10.0 - ix)
 	b.position = Vector2(8, y)
 	b.custom_minimum_size = Vector2(w, maxf(h, th + 8.0))
 	b.size = b.custom_minimum_size
 	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(cb)
 	parent.add_child(b)
-	var l := label(b, text, roundf((b.size.y - th) / 2.0) + 1.0, 12, Color(0.95, 0.93, 1.0), 5.0, w - 10.0)
+	var l := label(b, text, roundf((b.size.y - th) / 2.0) + 1.0, 12, Color(0.95, 0.93, 1.0), 5.0 + ix, w - 10.0 - ix)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if left:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if not icon.is_empty():
+		var ic := Icon.new()
+		ic.spec = icon
+		ic.position = Vector2(4, 4)
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(ic)
 	return b
 
 static func set_disabled(b: Button, d: bool) -> void:
@@ -72,6 +79,30 @@ static func set_disabled(b: Button, d: bool) -> void:
 
 static func set_text(b: Button, text: String) -> void:
 	(b.get_child(0) as Label).text = text
+
+static func picture(parent: Node, tex_name: String, y: float) -> Sprite2D:
+	var s := Sprite2D.new()
+	s.texture = G.tex(tex_name)
+	s.centered = false
+	s.position = Vector2(roundf((G.FIELD_W - s.texture.get_width()) / 2.0), y)
+	parent.add_child(s)
+	return s
+
+## 16x16 图标：稀有度底板 + 贴图或单字
+class Icon extends Control:
+	var spec := {}
+	func _draw() -> void:
+		draw_texture(G.tex(spec.tile), Vector2.ZERO)
+		if spec.has("tex"):
+			var t := G.tex(spec.tex)
+			var sz := t.get_size()
+			if sz.x > 12 or sz.y > 12:
+				var k := 12.0 / maxf(sz.x, sz.y)
+				draw_texture_rect(t, Rect2((Vector2(16, 16) - sz * k) / 2.0, sz * k), false)
+			else:
+				draw_texture(t, ((Vector2(16, 16) - sz) / 2.0).round())
+		else:
+			draw_string(G.font, Vector2(2, 13), spec.glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 
 static func backdrop(parent: Node) -> Background:
 	var bg := Background.new()

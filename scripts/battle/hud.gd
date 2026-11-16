@@ -4,17 +4,29 @@ extends Node2D
 
 var battle
 var bomb_rect := Rect2()
+var cutin_t := 0.0
+var cutin_tex: Texture2D
+
+func cutin(tex_name: String) -> void:
+	cutin_tex = G.tex(tex_name)
+	cutin_t = 1.4
 
 func setup(b) -> void:
 	battle = b
 	bomb_rect = Rect2(G.FIELD_W - 42, b.field_h - 42, 36, 36)
 
 func tick() -> void:
+	cutin_t -= get_process_delta_time()
 	queue_redraw()
 
 func _draw() -> void:
 	var f := G.font
 	var run: Dictionary = G.run
+	if cutin_t > 0.0 and cutin_tex != null:
+		var k := clampf(cutin_t / 1.4, 0, 1)
+		var a := minf(1.0, minf(k * 4.0, (1.0 - k) * 6.0)) * 0.75
+		var sz := cutin_tex.get_size() * 4.0
+		draw_texture_rect(cutin_tex, Rect2(G.FIELD_W - sz.x - 6 + (k - 0.5) * 30.0, 56, sz.x, sz.y), false, Color(1, 1, 1, a))
 	var h := G.tex("heart")
 	var he := G.tex("heart_empty")
 	for i in run.max_hearts:

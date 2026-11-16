@@ -161,5 +161,13 @@ func relic_text(id: String) -> String:
 	var d: Dictionary = Db.RELICS[id]
 	return "%s〔%s〕\n%s" % [d.name, ["普通", "稀有", "传说"][d.rar], d.desc]
 
+func card_icon(c: Dictionary) -> Dictionary:
+	if c.kind == "money":
+		return {"tile": "tile_0", "tex": "coin"}
+	return {"tile": "tile_w", "tex": Db.WEAPON_ICON.get(c.id, c.id)}
+
+func relic_icon(id: String) -> Dictionary:
+	return {"tile": "tile_%d" % Db.RELICS[id].rar, "glyph": Db.RELICS[id].g}
+
 func upgradable() -> Array:
 	return run.weapons.filter(func(w): return w.lv < 3)
