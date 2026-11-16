@@ -42,7 +42,7 @@ func _process(dt: float) -> void:
 		maxb = maxi(maxb, b.bullets.list.size())
 		fps_min = mini(fps_min, Engine.get_frames_per_second())
 	if t > 5.0 and t < 5.0 + dt * 1.5:
-		get_viewport().get_texture().get_image().save_png("/tmp/sp_%s_%d.png" % [cur[0], cur[1]])
+		get_viewport().get_texture().get_image().save_png("/tmp/spx/sp_%s_%d.png" % [cur[0], cur[1]])
 	if t > 5.3:
 		print("SPELL %s %d %s | 最多子弹 %d" % [cur[0], cur[1], b.boss.phases[cur[1]].name, maxb])
 		_next()
