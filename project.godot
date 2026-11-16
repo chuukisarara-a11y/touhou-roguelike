@@ -11,6 +11,7 @@ boot_splash/show_image=false
 
 [autoload]
 G="*res://scripts/core/game.gd"
+Au="*res://scripts/core/audio.gd"
 
 [display]
 window/size/viewport_width=200

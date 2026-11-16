@@ -55,6 +55,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventScreenTouch and ev.pressed:
 		for i in reachable():
 			if node_pos(G.run.map[i]).distance_to(ev.position) < 17.0:
+				Au.sfx("select")
 				G.main.enter_node(i)
 				return
 

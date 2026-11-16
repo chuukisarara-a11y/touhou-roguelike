@@ -72,6 +72,7 @@ func tick(dt: float, real_dt: float, battle) -> void:
 			w.cd -= dt
 			if w.cd <= 0.0:
 				w.cd += Weapons.fire(w, self, battle)
+				Au.sfx("shoot", -6.0)
 	if invuln > 0.0:
 		invuln -= dt
 		_sprite.visible = int(_t * 20.0) % 2 == 0

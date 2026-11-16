@@ -39,6 +39,7 @@ class Enemy:
 			return
 		hp -= d
 		flash = 0.06
+		Au.sfx("hit", -8.0)
 		if hp <= 0.0:
 			if is_boss and phase_i < phases.size() - 1:
 				phase_i += 1

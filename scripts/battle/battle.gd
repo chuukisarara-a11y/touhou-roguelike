@@ -131,6 +131,7 @@ func _tick_waves(dt: float) -> void:
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
 			hud.cutin("p_" + Db.BOSSES[s.boss].tex)
+			Au.sfx("warn")
 		else:
 			enemies.spawn(s.kind, s.move, hp_mult)
 	if pending.is_empty() and enemies.alive() == 0:
@@ -145,6 +146,7 @@ func _win() -> void:
 	bullets.clear_all(fx)
 	items.magnet_all = true
 	player.invuln = 0.0
+	Au.sfx("win")
 	banner = "胜利"
 	banner_t = 1.6
 
@@ -153,11 +155,13 @@ func add_bomb(v: float) -> void:
 
 func on_graze(pos: Vector2) -> void:
 	add_bomb(0.022 * (1.4 if G.has("tea") else 1.0))
+	Au.sfx("graze", -4.0)
 	fx.spark(pos, Color(1, 1, 1))
 
 func on_enemy_killed(e) -> void:
 	kills += 1
 	G.run.kills += 1
+	Au.sfx("bosskill" if e.is_boss else "kill", 0.0 if e.is_boss else -5.0)
 	fx.burst(e.pos, Color(0.6, 0.9, 1.0), 8 if not e.is_boss else 40, 18.0 if not e.is_boss else 50.0)
 	items.drop_coins(e.pos, e.coins)
 	add_bomb(0.015)
@@ -178,6 +182,7 @@ func on_enemy_killed(e) -> void:
 
 func on_boss_phase(e) -> void:
 	hud.cutin("p_" + e.def.tex)
+	Au.sfx("phase")
 	bullets.clear_all(fx)
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
 	items.drop_coins(e.pos, 8)
@@ -187,6 +192,7 @@ func player_hit() -> void:
 	if player.invuln > 0.0 or state != "play":
 		return
 	hits += 1
+	Au.sfx("phit")
 	bullets.clear_all(fx)
 	fx.burst(player.position, Color(1, 0.3, 0.4), 24, 36.0)
 	shake = 0.3
@@ -211,6 +217,7 @@ func use_bomb() -> void:
 	if G.run.bomb < 1.0 or state != "play":
 		return
 	G.run.bomb = 0.0
+	Au.sfx("bomb")
 	player.invuln = maxf(player.invuln, 2.5)
 	var n := bullets.clear_all(fx)
 	if G.has("camera"):

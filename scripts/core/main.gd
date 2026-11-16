@@ -37,12 +37,26 @@ func goto(name: String, arg := {}) -> void:
 	screen = Node2D.new()
 	screen.set_script(load(SCREENS[name]))
 	screen_name = name
+	_pick_bgm(name, arg)
 	if screen.has_method("setup"):
 		screen.setup(arg)
 	add_child(screen)
 	# 切换界面时的淡入
 	_fade.color.a = 1.0
 	_fade.create_tween().tween_property(_fade, "color:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE)
+
+## 各界面对应的 BGM 槽位（文件放在 assets/music/ 下，缺文件则静音）
+func _pick_bgm(name: String, arg: Dictionary) -> void:
+	match name:
+		"title":
+			Au.bgm("title")
+		"battle":
+			var ch: int = G.run.chapter
+			Au.bgm(("boss%d" % ch) if arg.get("kind", "") == "boss" else ("battle%d" % ch))
+		"result":
+			Au.bgm("result" if arg.get("win", false) else "gameover")
+		_:
+			Au.bgm("map")
 
 func start_run() -> void:
 	G.new_run()

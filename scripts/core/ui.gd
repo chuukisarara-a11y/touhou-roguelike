@@ -61,6 +61,7 @@ static func button(parent: Node, text: String, y: float, cb: Callable, h := 26.0
 	b.custom_minimum_size = Vector2(w, maxf(h, th + 8.0))
 	b.size = b.custom_minimum_size
 	b.focus_mode = Control.FOCUS_NONE
+	b.pressed.connect(func(): Au.sfx("click"))
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	b.pivot_offset = b.size / 2.0

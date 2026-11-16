@@ -30,9 +30,11 @@ func tick(dt: float, battle) -> void:
 		if it[2] == "got_coin":
 			var v := 2 if (G.has("saisen") and randf() < 0.25) else 1
 			G.run.money += v
+			Au.sfx("coin", -4.0)
 			battle.earned += v
 		elif it[2] == "got_heart":
 			G.heal(1)
+			Au.sfx("heal")
 			battle.fx.text(pp + Vector2(0, -14), "+1 心", Color(1, 0.5, 0.6))
 	list = list.filter(func(it): return it[2] == "coin" or it[2] == "heart")
 	queue_redraw()
