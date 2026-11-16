@@ -101,7 +101,7 @@ func _choose(ch: Dictionary) -> void:
 	var note := ""
 	match ch.op:
 		"bomb":
-			G.run.bomb = 1.0
+			G.fill_bomb()
 			note = "（符卡槽充满了）"
 		"heal":
 			G.heal(1)

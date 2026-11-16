@@ -34,6 +34,14 @@ var banner_t := 0.0
 var move_finger := -1
 var slow_budget := SLOW_MAX
 var slowmo_active := false
+var graze_combo := 0
+var combo_t := 0.0
+var grazes := 0
+var spirit := 0
+var afterglow_t := 0.0
+var counter_cd := 0.0
+var phase_clean := true
+var spell_bg: SpellBg
 var timestop := 0.0      # 时间停止剩余秒数（咲夜）：期间除 Boss 外一切静止，自机不能动
 var ts_real := 0.0
 var _ts: ColorRect
@@ -47,6 +55,8 @@ func setup(arg: Dictionary) -> void:
 func _ready() -> void:
 	field_h = G.field_h()
 	bg = Background.new(); add_child(bg); bg.setup(field_h)
+	G.spirit_lv = 0
+	spell_bg = SpellBg.new(); spell_bg.battle = self; add_child(spell_bg)
 	bg.mode = Db.CHAPTERS[G.run.chapter].bg
 	enemies = EnemyLayer.new(); add_child(enemies)
 	items = ItemLayer.new(); add_child(items)
@@ -117,10 +127,16 @@ func _process(real_dt: float) -> void:
 	if G.bot:
 		_bt += dt
 		player.touch_delta += Vector2(cos(_bt * 1.3) * 1.2, sin(_bt * 2.1) * 0.5)
-		if G.run.bomb >= 1.0 and bullets.list.size() > 60:
+		if G.run.bomb >= 2.0 and bullets.list.size() > 120:
 			use_bomb()
 
 	bg.tick(dt)
+	combo_t -= dt
+	if combo_t <= 0.0:
+		graze_combo = 0
+	afterglow_t -= dt
+	counter_cd -= dt
+	spell_bg.tick(dt)
 	player.tick(dt, real_dt, self)
 	if state == "play":
 		_tick_waves(dt)
@@ -196,6 +212,8 @@ func _tick_waves(dt: float) -> void:
 		var s: Dictionary = pending.pop_front()
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
+			if boss.phase_name() != "":
+				spell_bg.declare()
 			G.see(Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			hud.cutin("p_" + Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			Au.sfx("warn")
@@ -210,7 +228,7 @@ func _tick_waves(dt: float) -> void:
 func _win() -> void:
 	state = "won"
 	end_t = 1.6
-	bullets.clear_all(fx)
+	_clear_to_points()
 	items.magnet_all = true
 	player.invuln = 0.0
 	Au.sfx("win")
@@ -218,12 +236,39 @@ func _win() -> void:
 	banner_t = 1.6
 
 func add_bomb(v: float) -> void:
-	G.run.bomb = minf(1.0, G.run.bomb + v)
+	G.run.bomb = minf(float(G.bomb_max()), G.run.bomb + v)
 
+func graze_radius() -> float:
+	return player.graze_radius() * (1.0 + 0.08 * G.spirit_lv) * (1.5 if afterglow_t > 0.0 else 1.0)
+
+## 擦弹：连击越高充能越快；「御札返し」会顺手反击
 func on_graze(pos: Vector2) -> void:
-	add_bomb(0.022 * (1.4 if G.has("tea") else 1.0))
-	Au.sfx("graze", -4.0)
+	graze_combo += 1
+	combo_t = 0.8 * (2.0 if G.has("focus") else 1.0)
+	grazes += 1
+	var mult := 1.0 + 0.08 * mini(graze_combo, 25)
+	add_bomb(0.02 * mult * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0))
+	Au.sfx("graze", -4.0, 0.0, 1.0 + 0.02 * mini(graze_combo, 30))
 	fx.spark(pos, Color(1, 1, 1))
+	if G.has("counter") and counter_cd <= 0.0:
+		counter_cd = 0.06
+		shots.spawn("amulet", player.position, Vector2.UP.rotated(randf_range(-0.6, 0.6)) * 220.0, 5.0 * G.dmg_mult(), {"homing": 12.0, "rot": true})
+
+## 灵点：提升本场战斗的灵压等级
+func on_point() -> void:
+	spirit += 1
+	var lv := mini(5, spirit / 40)
+	if lv > G.spirit_lv:
+		G.spirit_lv = lv
+		fx.text(player.position + Vector2(0, -18), "灵压 Lv%d" % lv, Color(0.6, 0.95, 1.0))
+	if G.has("cycle"):
+		add_bomb(0.006)
+
+## 把消掉的敌弹变成灵点
+func _clear_to_points() -> int:
+	var pts := bullets.clear_all(fx)
+	items.drop_points(pts)
+	return pts.size()
 
 func on_enemy_killed(e) -> void:
 	kills += 1
@@ -236,7 +281,8 @@ func on_enemy_killed(e) -> void:
 	if e.ice_mark:
 		bullets.clear_near(e.pos, 45.0, fx)
 	if e.is_boss:
-		bullets.clear_all(fx)
+		_spell_result(e.phases[e.phase_i])
+		_clear_to_points()
 		shake = 0.4
 	elif G.run.hearts < G.run.max_hearts and randf() < 0.025:
 		items.drop_heart(e.pos)
@@ -248,24 +294,40 @@ func on_enemy_killed(e) -> void:
 			fx.text(player.position + Vector2(0, -14), "+1 心", Color(1, 0.5, 0.6))
 
 func on_boss_phase(e) -> void:
+	_spell_result(e.phases[e.phase_i - 1])
 	hud.cutin("p_" + e.def.tex.trim_prefix("c_"))
 	Au.sfx("phase")
-	bullets.clear_all(fx)
+	_clear_to_points()
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
 	items.drop_coins(e.pos, 8)
 	shake = 0.25
+	if e.phase_name() != "":
+		spell_bg.declare()
+
+## 符卡收取：本阶段没被弹、没放符卡 → 额外奖励
+func _spell_result(ph: Dictionary) -> void:
+	if ph.name != "" and phase_clean:
+		var bonus: int = 12 * G.run.chapter
+		G.run.money += bonus
+		earned += bonus
+		banner = "收取符卡　+%d钱" % bonus
+		banner_t = 1.6
+		Au.sfx("win", -3.0)
+	phase_clean = true
 
 func player_hit() -> void:
-	if player.invuln > 0.0 or state != "play":
+	if player.invuln > 0.0 or state != "play" or G.dev_god:
 		return
 	hits += 1
+	phase_clean = false
+	graze_combo = 0
 	Au.sfx("phit")
 	bullets.clear_all(fx)
 	fx.burst(player.position, Color(1, 0.3, 0.4), 24, 36.0)
 	shake = 0.3
 	player.invuln = 2.0 + (1.0 if G.has("camo") else 0.0)
 	if G.has("lantern"):
-		G.run.bomb = 1.0
+		add_bomb(1.0)
 	if G.bot or G.dev_god:
 		return
 	if G.run.shield > 0:
@@ -288,24 +350,34 @@ func player_hit() -> void:
 			banner = "满身疮痍"
 			banner_t = 1.8
 
+## 符卡：一次用掉所有存满的格数，格数越多越强（憋大放小）
+const BOMB_NAMES := ["", "灵符「梦想封印」", "神灵「梦想封印·瞬」", "「梦想天生」"]
 func use_bomb() -> void:
-	if G.run.bomb < 1.0 or state != "play":
+	var k := int(floorf(G.run.bomb))
+	if k < 1 or state != "play":
 		return
-	G.run.bomb = 0.0
+	k = mini(k, 3)
+	G.run.bomb -= k
+	phase_clean = false
 	Au.sfx("bomb")
-	player.invuln = maxf(player.invuln, 2.5)
-	var n := bullets.clear_all(fx)
+	player.invuln = maxf(player.invuln, 2.0 + 0.8 * k)
+	var n := _clear_to_points()
 	if G.has("camera"):
 		items.drop_coins(player.position + Vector2(0, -30), mini(n / 4, 20))
 	if G.has("watch"):
 		bullet_slow_t = 3.0
-	# 灵符「梦想封印」
-	for i in 8:
-		shots.spawn("orb", player.position, Vector2.from_angle(TAU * i / 8.0) * 150.0, 60.0 * G.dmg_mult(), {"homing": 7.0, "pierce": 3, "radius": 7.0, "life": 4.0})
-	fx.burst(player.position, Color(1, 0.5, 0.6), 30, 60.0)
-	shake = 0.2
-	banner = "灵符「梦想封印」"
-	banner_t = 1.0
+	if G.has("afterglow"):
+		afterglow_t = 4.0
+	var orbs: int = [0, 8, 14, 22][k]
+	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult()
+	for i in orbs:
+		shots.spawn("orb", player.position, Vector2.from_angle(TAU * i / orbs) * (150.0 + 20.0 * k), dmg, {"homing": 7.0, "pierce": 2 + k, "radius": 6.0 + k, "life": 3.5 + k * 0.5})
+	if k >= 3:
+		bullet_slow_t = maxf(bullet_slow_t, 2.5)
+	fx.burst(player.position, Color(1, 0.5, 0.6), 20 + 15 * k, 40.0 + 25.0 * k)
+	shake = 0.15 + 0.1 * k
+	banner = BOMB_NAMES[k]
+	banner_t = 1.0 + 0.3 * k
 
 func bot_step() -> void:
 	pass

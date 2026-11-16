@@ -1,0 +1,48 @@
+extends Node
+## 开发用：依次进入每个 Boss 的每张符卡并截图（--spelltest），统计子弹数量与帧率
+var queue := []
+var t := 0.0
+var cur := []
+var maxb := 0
+var fps_min := 999
+func _ready() -> void:
+	G.dev_god = true
+	for id in (["cirno", "meiling", "kaguya"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
+		for i in Db.BOSSES[id].phases.size():
+			queue.append([id, i])
+	_next()
+func _next() -> void:
+	if queue.is_empty():
+		get_tree().quit()
+		return
+	cur = queue.pop_front()
+	var ch := 1
+	for c in Db.CHAPTERS:
+		if Db.CHAPTERS[c].boss == cur[0] or Db.CHAPTERS[c].elites.has(cur[0]):
+			ch = c
+	G.new_run()
+	for i in range(1, ch):
+		G.next_chapter()
+	G.run.floor = 8
+	G.main.goto("battle", {"kind": "boss", "boss": cur[0]})
+	t = 0.0
+	maxb = 0
+	fps_min = 999
+func _process(dt: float) -> void:
+	t += dt
+	var b = G.main.screen
+	if b == null or not b.has_method("pause") or b.boss == null:
+		return
+	if t > 0.3 and t < 0.4 and b.boss.phase_i != cur[1]:
+		b.boss.phase_i = cur[1]
+		b.boss.load_phase()
+		b.boss.pause = 0.0
+	b.boss.hp = b.boss.max_hp
+	if t > 1.5:
+		maxb = maxi(maxb, b.bullets.list.size())
+		fps_min = mini(fps_min, Engine.get_frames_per_second())
+	if t > 5.0 and t < 5.0 + dt * 1.5:
+		get_viewport().get_texture().get_image().save_png("/tmp/sp_%s_%d.png" % [cur[0], cur[1]])
+	if t > 5.3:
+		print("SPELL %s %d %s | 最多子弹 %d" % [cur[0], cur[1], b.boss.phases[cur[1]].name, maxb])
+		_next()

@@ -24,6 +24,7 @@ const RUN_PATH := "user://run.dat"
 const DEV_PASS := "gensokyo"   # 开发者模式口令（标题画面点月亮输入）
 var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "dev": false, "runs": 0, "wins": 0}
 var dev_god := false     # 开发者：无敌
+var spirit_lv := 0       # 本场战斗的灵压等级（吸收灵点提升，战斗结束清零）
 var resume := {}         # 读档后要回到的界面 {"screen", "arg"}
 
 func _ready() -> void:
@@ -164,12 +165,22 @@ func dmg_mult() -> float:
 	if has("laevatein") and run.hearts >= run.max_hearts:
 		m += 0.5
 	m += 0.1 * run.power
+	m += 0.05 * spirit_lv
+	if has("hold"):
+		m += 0.12 * floorf(run.bomb)
 	if has("sage"):
 		var tags := {}
 		for w in run.weapons:
 			tags[Db.WEAPONS[w.id].tag] = true
 		m += 0.08 * tags.size()
 	return m
+
+## 符卡槽：以「格」为单位，默认最多存 2 格
+func bomb_max() -> int:
+	return 2 + (1 if has("stock3") else 0)
+
+func fill_bomb() -> void:
+	run.bomb = float(bomb_max())
 
 func heal(n: int) -> void:
 	run.hearts = mini(run.max_hearts, run.hearts + n)

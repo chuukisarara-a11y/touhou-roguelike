@@ -70,7 +70,7 @@ func _choose(ch: Dictionary) -> void:
 				G.run.hearts = maxi(1, G.run.hearts - op[1])
 				lines.append("失去了 %d 心" % op[1])
 			"bomb":
-				G.run.bomb = 1.0
+				G.fill_bomb()
 				lines.append("符卡槽充满了")
 			"maxhp":
 				G.run.max_hearts = maxi(1, G.run.max_hearts + op[1])

@@ -33,8 +33,8 @@ func _ready() -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
 	goto("title")
-	if OS.get_cmdline_user_args().has("--uitest") or OS.get_cmdline_user_args().has("--scrolltest"):
-		add_child(load("res://tools/" + ("_scrolltest.gd" if OS.get_cmdline_user_args().has("--scrolltest") else "uitest.gd") + "").new())
+	if OS.get_cmdline_user_args().has("--uitest") or OS.get_cmdline_user_args().has("--scrolltest") or OS.get_cmdline_user_args().has("--spelltest"):
+		add_child(load("res://tools/" + (("_scrolltest.gd" if OS.get_cmdline_user_args().has("--scrolltest") else "_spelltest.gd") if not OS.get_cmdline_user_args().has("--uitest") else "uitest.gd") + "").new())
 
 func goto(name: String, arg := {}) -> void:
 	if screen != null:

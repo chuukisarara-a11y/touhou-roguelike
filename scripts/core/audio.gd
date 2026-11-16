@@ -48,7 +48,7 @@ func bgm(name: String) -> void:
 			_bgm.volume_db = bgm_db
 			_bgm.play())
 
-func sfx(name: String, db := 0.0, pitch_var := 0.04) -> void:
+func sfx(name: String, db := 0.0, pitch_var := 0.04, pitch := 1.0) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _last.get(name, -1.0) < MIN_GAP.get(name, 0.0):
 		return
@@ -62,5 +62,5 @@ func sfx(name: String, db := 0.0, pitch_var := 0.04) -> void:
 	_next = (_next + 1) % _pool.size()
 	p.stream = _cache[name]
 	p.volume_db = sfx_db + db
-	p.pitch_scale = 1.0 + randf_range(-pitch_var, pitch_var)
+	p.pitch_scale = pitch + randf_range(-pitch_var, pitch_var)
 	p.play()

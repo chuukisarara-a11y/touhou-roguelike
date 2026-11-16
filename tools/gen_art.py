@@ -418,14 +418,52 @@ def b_coin(d):   # 方孔铜钱：与白芯圆形敌弹明显不同
 small("coin", 8, 8, b_coin)
 
 # ------------------------------------------------------------------ 敌弹图集（每格 16 单位）
+# 行 = 形状：0小圆 1大圆 2米粒 3小刀 4星弹 5蝴蝶 6札弹；列 = 颜色：0红 1蓝 2绿 3粉 4紫 5青 6白
 COLS = [(240, 60, 70), (70, 120, 250), (70, 210, 100), (255, 130, 200), (175, 90, 245), (90, 220, 240), (225, 228, 240)]
-atlas = Dr(16 * len(COLS), 48, S)
+atlas = Dr(16 * len(COLS), 16 * 7, S)
 for i, c in enumerate(COLS):
     ox = i * 16 + 8
-    atlas.ell(ox, 8, 4.3, 4.3, dark(c, 0.5)); atlas.ell(ox, 8, 3.5, 3.5, c); atlas.ell(ox, 8, 2.0, 2.0, WHITE)
-    atlas.ell(ox, 24, 7.3, 7.3, dark(c, 0.5)); atlas.ell(ox, 24, 6.4, 6.4, c); atlas.ell(ox, 24, 4.2, 4.2, WHITE)
-    atlas.ell(ox, 40, 2.6, 5.4, dark(c, 0.5)); atlas.ell(ox, 40, 1.9, 4.6, c); atlas.ell(ox, 40, 0.9, 3.0, WHITE)
+    dk = dark(c, 0.5)
+    atlas.ell(ox, 8, 4.3, 4.3, dk); atlas.ell(ox, 8, 3.5, 3.5, c); atlas.ell(ox, 8, 2.0, 2.0, WHITE)
+    atlas.ell(ox, 24, 7.3, 7.3, dk); atlas.ell(ox, 24, 6.4, 6.4, c); atlas.ell(ox, 24, 4.2, 4.2, WHITE)
+    atlas.ell(ox, 40, 2.6, 5.4, dk); atlas.ell(ox, 40, 1.9, 4.6, c); atlas.ell(ox, 40, 0.9, 3.0, WHITE)
+    # 小刀（刀尖朝上）
+    atlas.poly([(ox, 49.2), (ox + 2.2, 54), (ox + 1.6, 59), (ox - 1.6, 59), (ox - 2.2, 54)], dk)
+    atlas.poly([(ox, 50.2), (ox + 1.4, 54), (ox + 0.9, 58.4), (ox - 0.9, 58.4), (ox - 1.4, 54)], WHITE)
+    atlas.line([(ox, 51), (ox, 58)], c, 0.5)
+    atlas.rect(ox - 2.4, 59, ox + 2.4, 60.4, c); atlas.rect(ox - 0.8, 60.4, ox + 0.8, 63, dk)
+    # 星弹
+    pts = []
+    for k in range(10):
+        a2 = -math.pi / 2 + k * math.pi / 5
+        rr = 5.2 if k % 2 == 0 else 2.4
+        pts.append((ox + math.cos(a2) * rr, 72 + math.sin(a2) * rr))
+    atlas.poly(pts, dk)
+    pts2 = [(ox + (x - ox) * 0.78, 72 + (y - 72) * 0.78) for x, y in pts]
+    atlas.poly(pts2, c); atlas.ell(ox, 72, 1.5, 1.5, WHITE)
+    # 蝴蝶
+    for m in (1, -1):
+        atlas.poly([(ox, 87), (ox + m * 6.6, 82.4), (ox + m * 7.2, 86.6), (ox + m * 3, 89.4)], dk)
+        atlas.poly([(ox, 88.6), (ox + m * 5.4, 89.6), (ox + m * 4.4, 93.6), (ox + m * 1.4, 92)], dk)
+        atlas.poly([(ox + m * 0.6, 87.2), (ox + m * 5.8, 83.6), (ox + m * 6.2, 86.4), (ox + m * 2.8, 88.6)], c)
+        atlas.poly([(ox + m * 0.6, 88.8), (ox + m * 4.6, 89.8), (ox + m * 3.8, 92.6), (ox + m * 1.4, 91.2)], c)
+    atlas.ell(ox, 88.5, 0.9, 3.4, WHITE)
+    # 札弹
+    atlas.rect(ox - 2.6, 98.6, ox + 2.6, 109.4, dk); atlas.rect(ox - 2.0, 99.2, ox + 2.0, 108.8, WHITE)
+    atlas.rect(ox - 2.0, 99.2, ox + 2.0, 100.6, c); atlas.rect(ox - 2.0, 107.4, ox + 2.0, 108.8, c); atlas.rect(ox - 0.6, 101.8, ox + 0.6, 106.2, c)
 atlas.save("bullets")
+# 柔光（加法混合用）
+g = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+for y in range(64):
+    for x in range(64):
+        d = math.hypot(x - 31.5, y - 31.5) / 32.0
+        if d < 1:
+            g.putpixel((x, y), (255, 255, 255, int(255 * (1 - d) ** 2.2)))
+g.save(os.path.join(OUT, "glow.png"))
+# 灵点
+def b_point(d):
+    d.poly([(3, 0), (6, 3.5), (3, 7), (0, 3.5)], (120, 230, 255)); d.poly([(3, 1.6), (4.4, 3.5), (3, 5.4), (1.6, 3.5)], WHITE)
+small("point", 6, 7, b_point)
 
 # 图标底板
 for name, c in (("tile_0", (70, 76, 110)), ("tile_1", (60, 110, 190)), ("tile_2", (200, 140, 40)), ("tile_w", (120, 60, 110))):

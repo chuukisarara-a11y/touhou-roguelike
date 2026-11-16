@@ -43,7 +43,7 @@ func _ready() -> void:
 	y2 += _add("灵力结晶：伤害永久 +10%", int((150 + 50 * G.run.power) * disc), y2, func(): G.run.power += 1, 24.0, false, {}, true)
 	y2 += _add("替身人偶：心归零时复活一次", int(120 * disc), y2, func(): G.run.dolls += 1, 24.0, true)
 	y2 += _add("护身结界：抵挡接下来 2 次被弹", int(100 * disc), y2, func(): G.run.shield += 2, 24.0, true)
-	y2 += _add("灵符补充：符卡槽充满", int(60 * disc), y2, func(): G.run.bomb = 1.0, 24.0, true)
+	y2 += _add("灵符补充：符卡槽充满", int(60 * disc), y2, func(): G.fill_bomb(), 24.0, true)
 	for i in _buttons.size():
 		_pages.append(0 if i < n1 else 1)
 	var yb := maxf(y, y2)
