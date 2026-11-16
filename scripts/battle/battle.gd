@@ -201,12 +201,20 @@ func player_hit() -> void:
 		G.run.bomb = 1.0
 	if G.bot:
 		return
+	if G.run.shield > 0:
+		G.run.shield -= 1
+		fx.text(player.position + Vector2(0, -16), "护身结界！", Color(0.6, 0.9, 1.0))
+		return
 	G.run.hearts -= 1
 	if G.run.hearts <= 0:
 		if G.has("elixir") and not G.run.revived:
 			G.run.revived = true
 			G.run.hearts = 2
 			fx.text(player.position + Vector2(0, -16), "蓬莱之药！", Color(1, 0.9, 0.5))
+		elif G.run.dolls > 0:
+			G.run.dolls -= 1
+			G.run.hearts = 2
+			fx.text(player.position + Vector2(0, -16), "替身人偶！", Color(1, 0.9, 0.5))
 		else:
 			state = "lost"
 			end_t = 1.8

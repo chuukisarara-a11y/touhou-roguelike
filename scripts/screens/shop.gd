@@ -3,6 +3,9 @@ extends Node2D
 
 var _buttons := []   # [button, price, effect, repeat, sold]
 var entry_label: Label
+var _pages := []
+var _page := 0
+var _switch: Button
 
 func _ready() -> void:
 	UI.backdrop(self)
@@ -28,13 +31,40 @@ func _ready() -> void:
 		var price2 := int([80, 130, 180][Db.RELICS[rid].rar] * disc)
 		y += _add(G.relic_text(rid), price2, y, func(): G.add_relic(rid), 36.0, false, G.relic_icon(rid))
 	y += _add("回复 1 心", int(30 * disc), y, func(): G.heal(1), 24.0, true)
-	UI.button(self, "离开", y, func(): G.main.node_done(), 24.0)
+	var n1 := _buttons.size()
+	# 第二页：高价强化与一次性道具
+	var y2 := 42.0
+	for w in G.run.weapons:
+		if w.lv >= 3 and not w.get("awake", false) and y2 < 100.0:
+			y2 += _add("觉醒·%s\n这张符札的伤害 +60%%" % Db.WEAPONS[w.id].name, int(240 * disc), y2, func(): w["awake"] = true, 36.0, false, G.card_icon({"kind": "up", "id": w.id}))
+	if G.run.max_weapons < 5:
+		y2 += _add("第五个符札栏位", int(300 * disc), y2, func(): G.run.max_weapons = 5, 24.0, false, {}, true)
+	y2 += _add("灵力结晶：伤害永久 +10%", int((150 + 50 * G.run.power) * disc), y2, func(): G.run.power += 1, 24.0, false, {}, true)
+	y2 += _add("替身人偶：心归零时复活一次", int(120 * disc), y2, func(): G.run.dolls += 1, 24.0, true)
+	y2 += _add("护身结界：抵挡接下来 2 次被弹", int(100 * disc), y2, func(): G.run.shield += 2, 24.0, true)
+	y2 += _add("灵符补充：符卡槽充满", int(60 * disc), y2, func(): G.run.bomb = 1.0, 24.0, true)
+	for i in _buttons.size():
+		_pages.append(0 if i < n1 else 1)
+	var yb := maxf(y, y2)
+	_switch = UI.button(self, "", yb, _toggle, 24.0)
+	UI.button(self, "离开", yb + 28, func(): G.main.node_done(), 24.0)
+	_show_page()
 	_refresh()
 
-func _add(text: String, price: int, y: float, effect: Callable, h := 36.0, repeat := false, icon := {}) -> float:
+func _toggle() -> void:
+	_page = 1 - _page
+	_show_page()
+
+func _show_page() -> void:
+	for i in _buttons.size():
+		_buttons[i][0].visible = _pages[i] == _page
+	UI.set_text(_switch, "看看高价货与道具 ▶" if _page == 0 else "◀ 回到符札与宝具")
+
+func _add(text: String, price: int, y: float, effect: Callable, h := 36.0, repeat := false, icon := {}, oneline := false) -> float:
 	var entry := []
-	var b := UI.button(self, text if not repeat else "%s（%d 钱）" % [text, price], y, func(): _buy(entry), h, not repeat, icon)
-	if not repeat:
+	var small := repeat or oneline
+	var b := UI.button(self, text if not small else "%s（%d钱）" % [text, price], y, func(): _buy(entry), h, not small, icon)
+	if not small:
 		var pl := Label.new()
 		pl.text = "%d钱" % price
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

@@ -86,6 +86,10 @@ func enter_node(i: int) -> void:
 func battle_done(info: Dictionary) -> void:
 	var run: Dictionary = G.run
 	run.battles += 1
+	if info.kind == "elite" and run.chapter <= 3 and run.shard_ch < run.chapter:
+		run.shard_ch = run.chapter
+		run.shards += 1
+		info["shard"] = true
 	run.chapter_first = false
 	if G.has("onigiri"):
 		run.onigiri += 1
@@ -97,11 +101,12 @@ func battle_done(info: Dictionary) -> void:
 func node_done() -> void:
 	var node: Dictionary = G.run.map[G.run.pos]
 	if node.type == "boss":
-		if G.run.chapter < Db.CHAPTERS.size():
+		var ch: int = G.run.chapter
+		if ch < 3 or (ch == 3 and G.run.shards >= 3):
 			G.next_chapter()
 			goto("map")
 		else:
-			goto("result", {"win": true})
+			goto("result", {"win": true, "true_end": ch == 4})
 	else:
 		goto("map")
 

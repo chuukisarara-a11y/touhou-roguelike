@@ -65,6 +65,7 @@ func new_run() -> void:
 		"chapter": 1, "floor": 0, "pos": -1, "map": [],
 		"kills": 0, "battles": 0, "revived": false, "tea_kills": 0, "onigiri": 0,
 		"chapter_first": true,
+		"max_weapons": 4, "dolls": 0, "shield": 0, "power": 0, "shards": 0, "shard_ch": 0,
 	}
 	run.map = MapGen.generate(1)
 
@@ -100,6 +101,7 @@ func dmg_mult() -> float:
 		m += 0.15
 	if has("laevatein") and run.hearts >= run.max_hearts:
 		m += 0.5
+	m += 0.1 * run.power
 	if has("sage"):
 		var tags := {}
 		for w in run.weapons:
@@ -149,7 +151,7 @@ func roll_cards(n: int) -> Array:
 	for w in run.weapons:
 		if w.lv < 3:
 			cands.append({"kind": "up", "id": w.id})
-	if run.weapons.size() < MAX_WEAPONS:
+	if run.weapons.size() < run.max_weapons:
 		for id in Db.WEAPONS:
 			if weapon(id) == null:
 				cands.append({"kind": "new", "id": id})

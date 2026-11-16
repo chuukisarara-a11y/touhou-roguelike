@@ -262,12 +262,14 @@ SPECS = {
     "patchouli": dict(hair=(166, 108, 196), dress=(236, 200, 236), robe=True, eye=(130, 80, 170), mid=[f_collar((170, 90, 200))], front=[f_mobcap((244, 226, 244))], style="long", bangs=2, shoe=(150, 100, 170)),
     "sakuya": dict(hair=(218, 224, 238), dress=(66, 86, 166), eye=(100, 120, 206), mid=[f_collar((60, 150, 90)), f_apron], front=[f_band, f_braids((218, 224, 238), (60, 160, 96))], style="bob", bangs=3, shoe=(50, 50, 70)),
     "kaguya": dict(hair=(46, 40, 56), dress=(156, 46, 66), top=(248, 176, 196), robe=True, eye=(130, 76, 66), mid=[f_collar(WHITE)], front=[f_hime((46, 40, 56))], style="verylong", shoe=(120, 40, 50)),
+    "ran": dict(hair=(250, 214, 110), dress=(250, 250, 255), top=(70, 100, 190), robe=True, eye=(210, 160, 60), back=[lambda d, fr: [d.ell(24 + math.cos(a) * 15, 40 + math.sin(a) * 13, 6.5, 4, (250, 206, 96)) for a in [math.pi + i * math.pi / 8 for i in range(9)]]], mid=[f_collar((70, 100, 190))], front=[f_mobcap((250, 250, 255)), lambda d, fr: [d.poly([(mx(13, m), 1), (mx(10, m), -7), (mx(18, m), -1)], (250, 250, 255)) for m in (1, -1)]], style="bob", bangs=2, shoe=(60, 60, 80)),
+    "yukari": dict(hair=(252, 226, 130), dress=(140, 80, 190), eye=(170, 90, 200), mid=[f_collar(WHITE)], front=[f_mobcap((250, 250, 255)), f_dot(24, 9.6, 2, RED)], style="verylong", bangs=3, shoe=(90, 50, 120)),
     "sunny": dict(hair=(252, 198, 104), dress=RED, eye=(70, 130, 206), back=[f_wings((255, 242, 206)), f_twin((252, 198, 104))], mid=[f_collar(WHITE)]),
     "luna": dict(hair=(252, 238, 160), dress=WHITE, trim=(200, 200, 220), eye=(200, 70, 70), back=[f_wings((232, 232, 255))], mid=[f_collar((60, 54, 70))], front=[f_bow((60, 54, 70))], style="long", bangs=2),
     "starf": dict(hair=(70, 60, 92), dress=BLUE, eye=(130, 96, 70), back=[f_wings((214, 228, 255))], mid=[f_collar(WHITE)], front=[f_bow(BLUE)], style="long", bangs=3),
 }
 ANIM = {"fairy", "fairy_red", "bigfairy", "daiyousei", "cirno", "maid", "bamboo"}
-PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke", "meiling", "patchouli", "tewi", "reisen", "sakuya", "kaguya"]
+PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke", "meiling", "patchouli", "tewi", "reisen", "sakuya", "kaguya", "ran", "yukari"]
 
 def char_img(name, k, frame=0):
     return draw_char(SPECS[name], k, frame)
@@ -323,6 +325,30 @@ def ghost(k):
     d.ell(6.4, 7.4, 1, 1.9, K); d.ell(11.6, 7.4, 1, 1.9, K); d.ell(9, 11, 1.2, 0.9, (150, 170, 210))
     return outlined(d.im, 1)
 ghost(S).save(os.path.join(OUT, "ghost.png")); ghost(S * 1.6).save(os.path.join(OUT, "ghost_big.png"))
+
+# 隙间之眼 / 式神纸人
+def eye(k):
+    d = Dr(22, 12, k)
+    d.poly([(0, 6), (5, 1.5), (11, 0), (17, 1.5), (22, 6), (17, 10.5), (11, 12), (5, 10.5)], (70, 30, 100))
+    d.poly([(2.4, 6), (6, 3), (11, 2), (16, 3), (19.6, 6), (16, 9), (11, 10), (6, 9)], (24, 14, 36))
+    d.ell(11, 6, 3.4, 3.6, (226, 50, 70)); d.ell(11, 6, 1.2, 2.6, (30, 10, 20)); d.ell(9.8, 4.6, 0.8, 0.8, WHITE)
+    return outlined(d.im, 1)
+eye(S).save(os.path.join(OUT, "eye.png")); eye(S * 1.7).save(os.path.join(OUT, "eye_big.png"))
+d = Dr(14, 16, S)
+d.ell(7, 3.6, 3, 3, WHITE); d.poly([(1, 6), (13, 6), (12, 9), (9.6, 8.6), (10.6, 15), (3.4, 15), (4.4, 8.6), (2, 9)], WHITE)
+d.line([(7, 7.6), (7, 12.6)], RED, 0.6); d.line([(5, 9.6), (9, 9.6)], RED, 0.6)
+outlined(d.im, 1).save(os.path.join(OUT, "shiki.png"))
+d = Dr(200, 256, S)
+d.rect(0, 0, 200, 256, (30, 14, 48))
+r3 = random.Random(77)
+for i in range(60):
+    x = r3.uniform(0, 200); y = r3.uniform(0, 256); l = r3.uniform(8, 30)
+    d.rect(x, y, x + 0.6, y + l, r3.choice([(52, 26, 80), (44, 20, 70), (70, 36, 104)]))
+for i in range(14):
+    x = r3.uniform(10, 180); y = r3.uniform(6, 244); w = r3.uniform(8, 16)
+    d.poly([(x, y), (x + w / 2, y - w * 0.28), (x + w, y), (x + w / 2, y + w * 0.28)], (16, 8, 26))
+    d.ell(x + w / 2, y, w * 0.14, w * 0.18, (150, 40, 70))
+d.save("bg_gap")
 
 # ------------------------------------------------------------------ 字符画小图（自机弹、图标），按密度放大
 P = {"R": RED, "r": (150, 30, 48), "W": WHITE, "w": (200, 204, 220), "Y": YEL, "B": BLUE, "b": (40, 80, 170),
@@ -586,12 +612,12 @@ ic.paste(char_img("reimu", 3.2).crop((0, 24, 154, 194)), 19, 14)
 ic.im.save(os.path.join(ROOT, "assets", "icon.png"))
 
 # 预览图（开发用）
-names = ["c_maid_0", "c_bamboo_0", "c_rabbit", "bat_0", "book", "ghost", "ghost_big", "c_tewi", "c_reisen", "c_kaguya"]
+names = ["c_ran", "c_yukari", "eye", "eye_big", "shiki"]
 sheet = Image.new("RGBA", (len(names) * 104, 560), (50, 46, 80, 255))
 for i, n in enumerate(names):
     im = Image.open(os.path.join(OUT, n + ".png"))
     sheet.alpha_composite(im.resize((im.width * 2, im.height * 2), Image.NEAREST), (i * 104 + 4, 6))
-for i, n in enumerate(PORTRAITS[6:]):
+for i, n in enumerate(PORTRAITS[12:]):
     sheet.alpha_composite(Image.open(os.path.join(OUT, "p_%s.png" % n)), (i * 172 + 4, 160))
 sheet.alpha_composite(Image.open(os.path.join(OUT, "bullets.png")), (4, 366 + 44))
 sheet.save("/tmp/art_chars.png")

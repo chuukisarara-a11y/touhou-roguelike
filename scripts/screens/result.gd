@@ -2,9 +2,11 @@ extends Node2D
 ## 结算界面：通关或失败。
 
 var win := false
+var true_end := false
 
 func setup(arg: Dictionary) -> void:
 	win = arg.get("win", false)
+	true_end = arg.get("true_end", false)
 
 func _ready() -> void:
 	var h := G.field_h()
@@ -13,8 +15,11 @@ func _ready() -> void:
 	var y := h * 0.14
 	var body: Label
 	if win:
-		UI.label(self, "异变解决", y, 24, Color(1, 0.9, 0.6))
-		body = UI.label(self, "月亮恢复了原样，幻想乡又迎来了平静的早晨。\n（隐藏章节还在开发中）", y + 34, 12, Color(0.9, 0.9, 1.0), 10)
+		UI.label(self, "真·异变解决" if true_end else "异变解决", y, 24, Color(1, 0.9, 0.6))
+		var msg := "境界被拨回了原位，漫长的夜晚终于结束。\n紫打着哈欠缩回了隙间里。"
+		if not true_end:
+			msg = "辉夜认输了，可月亮还是有点不对劲。\n（每章打倒一个精英能拿到境界碎片，一局集齐 3 片，就能追到幕后的人。本局 %d/3）" % G.run.shards
+		body = UI.label(self, msg, y + 34, 12, Color(0.9, 0.9, 1.0), 10)
 	else:
 		UI.label(self, "满身疮痍", y, 24, Color(1, 0.45, 0.55))
 		body = UI.label(self, "在%s的第 %d 层倒下了。\n下次会更顺利的。" % [Db.CHAPTERS[run.chapter].name, run.floor], y + 34, 12, Color(0.9, 0.9, 1.0), 10)

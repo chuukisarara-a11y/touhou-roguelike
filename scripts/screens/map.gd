@@ -25,6 +25,15 @@ func _ready() -> void:
 	for r in G.run.relics:
 		rs.append(Db.RELICS[r].name)
 	_info.text = "符札：" + "、".join(ws) + ("\n宝具：" + "、".join(rs) if not rs.is_empty() else "")
+	var ex := []
+	if G.run.chapter <= 3:
+		ex.append("碎片 %d/3" % G.run.shards)
+	if G.run.dolls > 0:
+		ex.append("替身人偶×%d" % G.run.dolls)
+	if G.run.shield > 0:
+		ex.append("护身结界×%d" % G.run.shield)
+	if not ex.is_empty():
+		_info.text += "\n" + "　".join(ex)
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_info.size.y = UI.text_h(_info.text, G.FIELD_W - 8.0)
 	_info.position.y = h - 4 - _info.size.y
@@ -86,6 +95,9 @@ func _draw() -> void:
 func bot_step() -> void:
 	var r := reachable()
 	var pick: int = r[G.rng.randi_range(0, r.size() - 1)]
+	for i in r:
+		if G.run.map[i].type == "elite":
+			pick = i
 	var at = G.main.get_children().filter(func(c): return c.has_method("note"))
 	if not at.is_empty():
 		at[0].note("F%d:%s" % [G.run.map[pick].f + 1, G.run.map[pick].type])

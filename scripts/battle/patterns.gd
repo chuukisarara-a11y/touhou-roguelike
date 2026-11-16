@@ -82,6 +82,39 @@ static func boss(e, id: String, dt: float, b) -> void:
 				ring(b, e.pos, 18, 58.0, randf() * TAU, 0, 2)
 			if every(e, "b", 0.55, dt):
 				aimed(b, e.pos, 1, 0, 95.0, 2, 3)
+		"ran0":
+			if every(e, "a", 0.9, dt):
+				e.tm["z"] = -e.tm.get("z", 1.0)
+				ring(b, e.pos, 12, 62.0, t * 0.5 * e.tm["z"], 0, 3)
+			if every(e, "b", 2.0, dt):
+				aimed(b, e.pos, 3, 30, 96.0, 2, 6)
+		"ran1":  # 十二个式神绕着转，各自向外开火
+			if every(e, "a", 0.42, dt):
+				for i in 12:
+					var a9: float = t * 0.9 + i * TAU / 12.0
+					b.bullets.add(e.pos + Vector2.from_angle(a9) * 26.0, Vector2.from_angle(a9 + 0.5) * 60.0, 2, i % 6)
+			if every(e, "b", 2.4, dt):
+				aimed(b, e.pos, 5, 50, 90.0, 0, 6)
+		"yuk1":
+			if every(e, "a", 1.25, dt):
+				ring(b, e.pos, 20, 48.0, t, 0, 4)
+				ring(b, e.pos, 20, 72.0, -t + 0.16, 2, 1)
+			if every(e, "b", 2.1, dt):
+				aimed(b, e.pos, 5, 46, 98.0, 0, 6)
+		"yuk2":  # 从左右两侧交叉射来的光与暗
+			if every(e, "a", 0.19, dt):
+				var yy: float = randf_range(10, b.field_h * 0.55)
+				b.bullets.add(Vector2(-4, yy), Vector2.from_angle(0.5) * 66.0, 2, 1)
+				b.bullets.add(Vector2(G.FIELD_W + 4, yy), Vector2.from_angle(PI - 0.5) * 66.0, 2, 0)
+			if every(e, "b", 2.5, dt):
+				ring(b, e.pos, 12, 42.0, randf() * TAU, 1, 4)
+		"yuk3":
+			if every(e, "a", 0.12, dt):
+				b.bullets.add(e.pos, Vector2.from_angle(t * 2.3) * 64.0, 2, 4)
+				b.bullets.add(e.pos, Vector2.from_angle(-t * 2.3) * 64.0, 2, 3)
+			if every(e, "b", 1.5, dt):
+				for i in 14:
+					b.bullets.add(e.pos, Vector2.from_angle(TAU * i / 14.0 + t) * 80.0, 0, 6, "sa")
 		"mei0":
 			if every(e, "a", 1.0, dt):
 				e.tm["n"] = e.tm.get("n", 0) + 1

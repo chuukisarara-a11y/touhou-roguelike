@@ -20,6 +20,9 @@ func _ready() -> void:
 		G.run.money += bonus
 	UI.label(self, "获得 %d 钱%s" % [info.earned, ("（无伤奖励 +%d）" % bonus) if bonus > 0 else ""], y, 12, Color(0.9, 0.9, 1.0))
 	y += 18
+	if info.get("shard", false):
+		UI.label(self, "获得境界碎片（%d/3）" % G.run.shards, y, 12, Color(0.85, 0.6, 1.0))
+		y += 16
 	if info.kind == "elite":
 		var rid := G.roll_relic(0, 1)
 		if rid != "":

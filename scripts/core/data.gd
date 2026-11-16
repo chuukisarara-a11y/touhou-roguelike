@@ -63,9 +63,20 @@ const ENEMIES := {
 	"bamboo": {"tex": "c_bamboo", "anim": true, "hp": 58.0, "r": 7.0, "coins": 2, "atk": "cross", "cd": 1.5},
 	"bigghost": {"tex": "ghost_big", "hp": 300.0, "r": 10.0, "coins": 5, "atk": "ringaim", "cd": 2.2},
 	"ghost": {"tex": "ghost", "hp": 22.0, "r": 6.0, "coins": 1, "atk": "slowbig", "cd": 1.6},
+	# 第四章
+	"eye": {"tex": "eye", "hp": 44.0, "r": 7.0, "coins": 1, "atk": "burst3", "cd": 1.6},
+	"shiki": {"tex": "shiki", "hp": 60.0, "r": 6.0, "coins": 2, "atk": "cross", "cd": 1.2},
+	"bigeye": {"tex": "eye_big", "hp": 320.0, "r": 10.0, "coins": 6, "atk": "ringaim", "cd": 1.9},
 }
 
 const BOSSES := {
+	"ran": {"name": "八云蓝", "tex": "c_ran", "r": 9.0, "coins": 60, "phases": [
+		{"name": "", "hp": 500.0, "pat": "ran0"},
+		{"name": "式神「十二神将之宴」", "hp": 860.0, "pat": "ran1"}]},
+	"yukari": {"name": "八云紫", "tex": "c_yukari", "r": 9.0, "coins": 150, "phases": [
+		{"name": "境符「四重结界」", "hp": 1500.0, "pat": "yuk1"},
+		{"name": "结界「光与暗的网目」", "hp": 1600.0, "pat": "yuk2"},
+		{"name": "「弹幕结界」", "hp": 1800.0, "pat": "yuk3"}]},
 	"rumia": {"name": "露米娅", "tex": "c_rumia", "r": 9.0, "coins": 45, "phases": [
 		{"name": "", "hp": 480.0, "pat": "rumia0"},
 		{"name": "夜符「夜雀之歌」", "hp": 800.0, "pat": "rumia1"}]},
@@ -103,10 +114,20 @@ const CHAPTERS := {
 	1: {"name": "第一章 雾之湖", "bg": "lake", "elites": ["rumia", "daiyousei"], "boss": "cirno", "mobs": ["fairy", "fairy_red", "bigfairy", "kedama"]},
 	2: {"name": "第二章 红魔馆", "bg": "mansion", "elites": ["meiling", "patchouli"], "boss": "sakuya", "mobs": ["maid", "book", "bigbook", "bat"]},
 	3: {"name": "第三章 迷途竹林", "bg": "bamboo", "elites": ["tewi", "reisen"], "boss": "kaguya", "mobs": ["rabbit", "bamboo", "bigghost", "ghost"]},
+	4: {"name": "终章 境界的缝隙", "bg": "gap", "elites": ["ran"], "boss": "yukari", "mobs": ["eye", "shiki", "bigeye", "ghost"]},
 }
 
 ## Boss 战前对话。choices 的 op: bomb 符卡槽充满 / heal 回1心 / money 得 n 钱
 const TALKS := {
+	"yukari": {"lines": [
+		["boss", "哎呀，居然真的找到这里来了。把碎片一片一片捡起来，辛苦你了。"],
+		["reimu", "果然是你。月亮是你动的手脚？"],
+		["boss", "只是把夜晚和白天的境界稍微挪了一下。夜长一点，不是正适合赏月吗。"],
+		["reimu", "托你的福，妖精、女仆、兔子全都乱了套。"],
+		["boss", "那么，就请博丽的巫女亲手把它拨回去吧——如果你做得到的话。"]],
+	 "choices": [
+		{"text": "「做不到的话，我就不会来了。」", "op": "bomb", "reply": "呵呵，这才像话。来吧，让我看看这一夜你长进了多少。"},
+		{"text": "「打完请我喝酒，就当没发生过。」", "op": "heal", "reply": "成交。不过酒钱嘛，就从你的赛钱箱里出好了。"}]},
 	"cirno": {"lines": [
 		["boss", "站住！这片湖是本大爷的地盘！"],
 		["reimu", "又是你啊。今晚雾这么大，是你搞的鬼？"],

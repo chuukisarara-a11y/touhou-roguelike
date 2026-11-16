@@ -3,7 +3,7 @@ class_name Weapons
 
 static func fire(w: Dictionary, p: Player, b) -> float:
 	var s: ShotLayer = b.shots
-	var m: float = G.dmg_mult()
+	var m: float = G.dmg_mult() * (1.6 if w.get("awake", false) else 1.0)
 	var lv: int = w.lv
 	var pos := p.position
 	var track := 1.3 if G.tag_count("追踪") >= 2 else 1.0
