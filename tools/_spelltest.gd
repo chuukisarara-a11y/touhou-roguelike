@@ -7,7 +7,7 @@ var maxb := 0
 var fps_min := 999
 func _ready() -> void:
 	G.dev_god = true
-	for id in (["cirno", "meiling", "kaguya"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
+	for id in (["kaguya", "yukari"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
 		for i in Db.BOSSES[id].phases.size():
 			queue.append([id, i])
 	_next()
@@ -38,11 +38,15 @@ func _process(dt: float) -> void:
 		b.boss.load_phase()
 		b.boss.pause = 0.0
 	b.boss.hp = b.boss.max_hp
+	if OS.get_cmdline_user_args().has("--few") and int(t * 2) != int((t - dt) * 2) and not b.bullets.lasers.is_empty():
+		var l = b.bullets.lasers[0]
+		print("  t=%.1f lasers=%d l.t=%.2f warn=%.1f w=%.1f" % [t, b.bullets.lasers.size(), l.t, l.warn, l.cur_w()])
 	if t > 1.5:
 		maxb = maxi(maxb, b.bullets.list.size())
 		fps_min = mini(fps_min, Engine.get_frames_per_second())
-	if t > 5.0 and t < 5.0 + dt * 1.5:
-		get_viewport().get_texture().get_image().save_png("/tmp/spx/sp_%s_%d.png" % [cur[0], cur[1]])
-	if t > 5.3:
+	for st in ([5.0] if not OS.get_cmdline_user_args().has("--few") else [6.2, 7.0]):
+		if t > st and t < st + dt * 1.5:
+			get_viewport().get_texture().get_image().save_png("/tmp/spx/sp_%s_%d%s.png" % [cur[0], cur[1], "" if st == 5.0 else "_%d" % int(st * 10)])
+	if t > (5.3 if not OS.get_cmdline_user_args().has("--few") else 7.3):
 		print("SPELL %s %d %s | 最多子弹 %d" % [cur[0], cur[1], b.boss.phases[cur[1]].name, maxb])
 		_next()

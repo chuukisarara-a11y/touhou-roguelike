@@ -233,16 +233,19 @@ static func run(e, id: String, dt: float, b) -> void:
 					bl.col = 0 if n2 % 2 == 0 else 4
 					bl.tag = "sa"
 					bl.go_spread = randf_range(-0.2, 0.2)
-		"kagu1":  # 难题「佛御石之钵」：五道彩色激光缓缓旋转，激光之间不断涌出子弹
-			if every(e, "las", 6.6, dt):
+		"kagu1":  # 难题「佛御石之钵」：四道彩色激光缓缓旋转（每轮换方向），激光之间涌出子弹
+			if not e.tm.has("_las"):
+				e.tm["_las"] = 0.8
+			if every(e, "_las", 7.0, dt):
 				e.tm["lo"] = randf() * TAU
 				e.tm["lt"] = t
-				for i in 5:
-					b.bullets.laser(P, e.tm["lo"] + i * TAU / 5.0, 420.0, 6.0, 1.1, 5.2, i, 0.3, e)
-			if every(e, "a", 0.13, dt):
-				var lo: float = e.tm.get("lo", 0.0) + 0.3 * (t - e.tm.get("lt", t))
-				for i in 5:
-					shot(b, P, lo + (i + 0.5) * TAU / 5.0, 60.0, 0, 6)
+				e.tm["lr"] = -e.tm.get("lr", -0.16)
+				for i in 4:
+					b.bullets.laser(P, e.tm["lo"] + i * TAU / 4.0, 420.0, 6.0, 1.3, 4.2, i * 2 % 7, e.tm["lr"], e)
+			if every(e, "a", 0.2, dt):
+				var lo: float = e.tm.get("lo", 0.0) + e.tm.get("lr", 0.16) * (t - e.tm.get("lt", t))
+				for i in 4:
+					shot(b, P, lo + (i + 0.5) * TAU / 4.0 + randf_range(-0.25, 0.25), 50.0, 0, 6)
 		"kagu2":  # 难题「火鼠的皮衣」：旋转的火球一边飞一边向两侧洒下火星
 			if every(e, "a", 0.4, dt):
 				for k in 3:
@@ -293,11 +296,19 @@ static func run(e, id: String, dt: float, b) -> void:
 			if every(e, "b", 1.0, dt):
 				ring(b, P, 16, 50.0, t * 0.8, 5, 4)
 		"yuk2":  # 结界「光与暗的网目」：左右交叉的激光织成网，网眼里飞出蝴蝶
-			if every(e, "las", 3.0, dt):
-				for i in 3:
-					var y := 30.0 + i * 70.0 + randf_range(-10, 10)
-					b.bullets.laser(Vector2(-2, y), 0.55, 500.0, 5.0, 1.0, 1.5, 6)
-					b.bullets.laser(Vector2(G.FIELD_W + 2, y + 35.0), PI - 0.55, 500.0, 5.0, 1.0, 1.5, 4)
+			if every(e, "_las", 3.4, dt):
+				# 每轮随机角度和偏移，从屏幕上下全范围织出整张网；网会缓慢平移
+				var ang := randf_range(0.42, 0.72)
+				var gap := 74.0
+				var off := randf() * gap
+				var light: bool = e.tm.get("light", true)
+				e.tm["light"] = not light
+				var drift := randf_range(-0.04, 0.04)
+				var y: float = -b.field_h + off
+				while y < b.field_h:
+					b.bullets.laser(Vector2(-2, y), ang, 700.0, 5.0, 1.2, 1.4, 6 if light else 4, drift)
+					b.bullets.laser(Vector2(G.FIELD_W + 2, y + gap * 0.5), PI - ang, 700.0, 5.0, 1.2, 1.4, 4 if light else 6, -drift)
+					y += gap
 			if every(e, "a", 0.4, dt):
 				fan(b, P, aim(b, P) + randf_range(-0.3, 0.3), 3, 0.5, 66.0, 5, 4 if randf() < 0.5 else 1)
 		"yuk3":  # 「弹幕结界」：围绕自机出现的弹环向内收拢（留缺口）；紫的双螺旋蝴蝶
