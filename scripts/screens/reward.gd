@@ -20,6 +20,9 @@ func _ready() -> void:
 		G.run.money += bonus
 	UI.label(self, "获得 %d 钱%s" % [info.earned, ("（无伤奖励 +%d）" % bonus) if bonus > 0 else ""], y, 12, Color(0.9, 0.9, 1.0))
 	y += 18
+	if info.has("unlock"):
+		UI.label(self, "解锁新角色：" + info.unlock, y, 12, Color(1, 0.8, 0.4))
+		y += 18
 	if info.get("shard_miss", false):
 		UI.label(self, "（毫发无伤地战胜强敌，才能得到这里的境界碎片）", y, 12, Color(0.7, 0.6, 0.85), 8)
 		y += 28

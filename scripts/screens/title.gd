@@ -28,13 +28,13 @@ func _ready() -> void:
 	for it in items:
 		UI.button(self, it[0], y, it[1], 24.0)
 		y += 27
-	UI.label(self, "东方Project 同人作品　v0.11 开发版", h - 16, 12, Color(0.55, 0.53, 0.7))
+	UI.label(self, "东方Project 同人作品　v0.12 开发版", h - 16, 12, Color(0.55, 0.53, 0.7))
 
 func _new_game() -> void:
 	if G.has_save():
-		UI.confirm(self, "已有进行中的存档。\n开始新游戏会覆盖它，确定吗？", func(): G.main.start_run())
+		UI.confirm(self, "已有进行中的存档。\n开始新游戏会覆盖它，确定吗？", func(): G.main.goto("chars"))
 	else:
-		G.main.start_run()
+		G.main.goto("chars")
 
 func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventScreenTouch and ev.pressed and ev.position.distance_to(_moon) < 20.0:
@@ -71,4 +71,8 @@ func on_back() -> void:
 	get_tree().quit()
 
 func bot_step() -> void:
-	G.main.start_run()
+	var ch := "reimu"
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--char="):
+			ch = a.substr(7)
+	G.main.start_run(ch)

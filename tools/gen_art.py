@@ -173,6 +173,23 @@ def f_hime(H):
         for m in (1, -1):
             d.poly(mir([(8.6, 17), (13.6, 17), (13.6, 33), (9.2, 33)], m), H)
     return f
+def f_witch_hat(d, fr):
+    c = (40, 36, 54)
+    d.ell(24, 9.5, 19, 4.6, c)
+    d.poly([(13, 9), (35, 9), (31, -1), (27.5, -9), (22, -11.5), (18, -3)], c)
+    d.poly([(27, 9), (35, 9), (31, -1), (27.5, -9), (26, -6)], dark(c, 0.75))
+    d.poly([(13.6, 7.4), (34.4, 7.4), (33.6, 4.4), (14.6, 4.4)], WHITE)
+    d.poly([(30, 4.2), (36.5, 1.5), (36, 8.5)], WHITE)
+def f_headband(c):
+    def f(d, fr):
+        d.poly([(11.5, 10.6), (36.5, 10.6), (35.8, 7.4), (12.2, 7.4)], c)
+        d.poly([(33, 7), (38, 3.5), (38.5, 9.5)], c)
+    return f
+def f_capelet(c):
+    def f(d, fr):
+        d.poly([(15, 34.6), (33, 34.6), (36.5, 41), (11.5, 41)], c)
+        d.poly([(22.5, 36), (25.5, 36), (24, 41.5)], (220, 60, 80))
+    return f
 def f_bow(c, y=0):
     def f(d, fr):
         for m in (1, -1):
@@ -264,12 +281,14 @@ SPECS = {
     "kaguya": dict(hair=(46, 40, 56), dress=(156, 46, 66), top=(248, 176, 196), robe=True, eye=(130, 76, 66), mid=[f_collar(WHITE)], front=[f_hime((46, 40, 56))], style="verylong", shoe=(120, 40, 50)),
     "ran": dict(hair=(250, 214, 110), dress=(250, 250, 255), top=(70, 100, 190), robe=True, eye=(210, 160, 60), back=[lambda d, fr: [d.ell(24 + math.cos(a) * 15, 40 + math.sin(a) * 13, 6.5, 4, (250, 206, 96)) for a in [math.pi + i * math.pi / 8 for i in range(9)]]], mid=[f_collar((70, 100, 190))], front=[f_mobcap((250, 250, 255)), lambda d, fr: [d.poly([(mx(13, m), 1), (mx(10, m), -7), (mx(18, m), -1)], (250, 250, 255)) for m in (1, -1)]], style="bob", bangs=2, shoe=(60, 60, 80)),
     "yukari": dict(hair=(252, 226, 130), dress=(140, 80, 190), eye=(170, 90, 200), mid=[f_collar(WHITE)], front=[f_mobcap((250, 250, 255)), f_dot(24, 9.6, 2, RED)], style="verylong", bangs=3, shoe=(90, 50, 120)),
+    "marisa": dict(hair=(252, 222, 110), dress=(52, 46, 66), top=(52, 46, 66), sleeve=WHITE, eye=(214, 170, 60), mid=[f_collar(WHITE), f_apron], front=[f_witch_hat, f_braids((252, 222, 110), (120, 190, 110))], style="long", bangs=3, shoe=(60, 50, 60)),
+    "alice": dict(hair=(250, 226, 130), dress=(80, 120, 214), sleeve=WHITE, eye=(80, 130, 220), mid=[f_capelet(WHITE)], front=[f_headband(RED)], style="bob", bangs=2, shoe=(110, 70, 60)),
     "sunny": dict(hair=(252, 198, 104), dress=RED, eye=(70, 130, 206), back=[f_wings((255, 242, 206)), f_twin((252, 198, 104))], mid=[f_collar(WHITE)]),
     "luna": dict(hair=(252, 238, 160), dress=WHITE, trim=(200, 200, 220), eye=(200, 70, 70), back=[f_wings((232, 232, 255))], mid=[f_collar((60, 54, 70))], front=[f_bow((60, 54, 70))], style="long", bangs=2),
     "starf": dict(hair=(70, 60, 92), dress=BLUE, eye=(130, 96, 70), back=[f_wings((214, 228, 255))], mid=[f_collar(WHITE)], front=[f_bow(BLUE)], style="long", bangs=3),
 }
 ANIM = {"fairy", "fairy_red", "bigfairy", "daiyousei", "cirno", "maid", "bamboo"}
-PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke", "meiling", "patchouli", "tewi", "reisen", "sakuya", "kaguya", "ran", "yukari"]
+PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke", "meiling", "patchouli", "tewi", "reisen", "sakuya", "kaguya", "ran", "yukari", "marisa", "alice"]
 
 def char_img(name, k, frame=0):
     return draw_char(SPECS[name], k, frame)
@@ -608,6 +627,13 @@ def sc_clue(d):
     d.rect(0, 54, SW, SH, (30, 60, 46))
     shi = Image.open(os.path.join(OUT, "shiki.png"))
     d.paste(shi.resize((shi.width * 2, shi.height * 2), Image.NEAREST), 84, 12)
+def sc_forest(d):
+    grad(d, (14, 30, 40), (40, 80, 70)); moon(d, 150, 13, 6)
+    trees(d, 50, 30, (22, 60, 50), 131); trees(d, 58, 16, (16, 44, 40), 132)
+    d.rect(0, 56, SW, SH, (30, 60, 46))
+    d.poly([(20, 56), (20, 34), (36, 22), (52, 34), (52, 56)], (120, 96, 80)); d.poly([(16, 35), (36, 19), (56, 35)], (70, 50, 70)); d.rect(32, 44, 40, 56, (60, 44, 40)); d.rect(26, 38, 31, 43, (255, 224, 126))
+    put_char(d, "marisa", 100, -12)
+scene("ev_forest", sc_forest)
 scene("ev_gap", sc_gap); scene("ev_clue", sc_clue)
 def sc_gap(d):
     grad(d, (20, 8, 36), (60, 24, 84))
@@ -716,6 +742,21 @@ for i in range(60):
     x = r2.uniform(0, 200); y = r2.uniform(0, 250); l = r2.uniform(4, 9); a = r2.uniform(-0.6, 0.6)
     d.poly([(x, y), (x + l * math.cos(a), y + l * math.sin(a) + 1.2), (x + l * 0.5, y - 1)], (60, 124, 74))
 d.save("bg_bamboo")
+# 魔理沙线第一章：魔法森林
+d = Dr(200, 256, S)
+d.rect(0, 0, 200, 256, (16, 30, 34))
+r4 = random.Random(64)
+for i in range(46):
+    x = r4.uniform(0, 200); y = r4.uniform(0, 256); rr = r4.uniform(10, 22)
+    c = r4.choice([(22, 52, 44), (26, 62, 48), (18, 44, 42), (30, 70, 56)])
+    for dy in (0, 256, -256):
+        d.ell(x, y + dy, rr, rr * 0.8, c)
+        d.ell(x - rr * 0.25, y + dy - rr * 0.2, rr * 0.5, rr * 0.4, light(c, 0.12))
+for i in range(30):
+    x = r4.uniform(0, 198); y = r4.uniform(0, 254)
+    c = r4.choice([(250, 120, 140), (160, 220, 255), (250, 230, 140)])
+    d.ell(x, y, 1.6, 1.2, c); d.rect(x - 0.4, y + 1, x + 0.4, y + 2.6, (230, 230, 220))
+d.save("bg_forest")
 # 雾：先画白块再模糊，边缘柔和
 m = Image.new("L", (192 * S, 48 * S), 0)
 md = ImageDraw.Draw(m)
@@ -765,12 +806,12 @@ ic.paste(char_img("reimu", 3.2).crop((0, 24, 154, 194)), 19, 14)
 ic.im.save(os.path.join(ROOT, "assets", "icon.png"))
 
 # 预览图（开发用）
-names = ["c_ran", "c_yukari", "eye", "eye_big", "shiki"]
+names = ["c_marisa", "c_alice"]
 sheet = Image.new("RGBA", (len(names) * 104, 560), (50, 46, 80, 255))
 for i, n in enumerate(names):
     im = Image.open(os.path.join(OUT, n + ".png"))
     sheet.alpha_composite(im.resize((im.width * 2, im.height * 2), Image.NEAREST), (i * 104 + 4, 6))
-for i, n in enumerate(PORTRAITS[12:]):
+for i, n in enumerate(PORTRAITS[14:]):
     sheet.alpha_composite(Image.open(os.path.join(OUT, "p_%s.png" % n)), (i * 172 + 4, 160))
 sheet.alpha_composite(Image.open(os.path.join(OUT, "bullets.png")), (4, 366 + 44))
 sheet.save("/tmp/art_chars.png")

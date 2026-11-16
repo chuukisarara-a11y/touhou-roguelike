@@ -23,12 +23,13 @@ var _tex := {}
 const META_PATH := "user://meta.dat"
 const RUN_PATH := "user://run.dat"
 const DEV_PASS := "gensokyo"   # 开发者模式口令（标题画面点月亮输入）
-var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "dev": false, "runs": 0, "wins": 0}
+var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "chars": {"reimu": true}, "dev_char": "reimu", "dev": false, "runs": 0, "wins": 0}
 var dev_god := false     # 开发者：无敌
 var combo := 0           # 当前擦弹连击（战斗里实时更新，供伤害计算用）
 var focus_on := false    # 专注状态（缓慢移动或静止）
 var after_t := 0.0       # 「残心」剩余秒数
 var battle_t := 0.0      # 本场战斗已进行的秒数
+var mush := -1           # 「魔法蘑菇」本场的增益：0 伤害 1 移速 2 符卡
 var spirit_lv := 0       # 本场战斗的灵压等级（吸收灵点提升，战斗结束清零）
 var resume := {}         # 读档后要回到的界面 {"screen", "arg"}
 
@@ -119,7 +120,7 @@ func load_run() -> bool:
 		return false
 	run = d.run
 	# 旧存档补上新版本才有的字段
-	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0], ["skills", []], ["max_skills", 6]]:
+	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0], ["skills", []], ["max_skills", 6], ["char", "reimu"]]:
 		if not run.has(k[0]):
 			run[k[0]] = k[1]
 	for r in run.relics.duplicate():   # 旧版本里算宝具、现在是秘符的，挪过去
@@ -135,10 +136,11 @@ func clear_run() -> void:
 
 # ---------- 本局状态 ----------
 
-func new_run() -> void:
+func new_run(ch := "reimu") -> void:
+	var cd: Dictionary = Db.CHARS[ch]
 	run = {
-		"char": "reimu", "hearts": 5, "max_hearts": 5, "money": 0, "bomb": 1.0,
-		"weapons": [{"id": "amulet", "lv": 1, "cd": 0.0}], "relics": [],
+		"char": ch, "hearts": cd.hearts, "max_hearts": cd.hearts, "money": 0, "bomb": 1.0,
+		"weapons": [{"id": cd.start, "lv": 1, "cd": 0.0}], "relics": [],
 		"chapter": 1, "floor": 0, "pos": -1, "map": [],
 		"kills": 0, "battles": 0, "revived": false, "tea_kills": 0, "onigiri": 0,
 		"chapter_first": true,
@@ -146,6 +148,28 @@ func new_run() -> void:
 		"grazes_ch": 0, "seen_ev": [], "skills": [], "max_skills": 6,
 	}
 	run.map = MapGen.generate(1)
+
+## 当前角色的定义
+func cdef() -> Dictionary:
+	return Db.CHARS[run.get("char", "reimu")]
+
+## 第 n 章的设定（按角色路线覆盖名字、背景、精英、Boss）
+func chap(n: int) -> Dictionary:
+	var d: Dictionary = Db.CHAPTERS[n].duplicate()
+	d.merge(cdef().route.get(n, {}), true)
+	return d
+
+## 这张秘符当前角色能不能用
+func skill_ok(id: String) -> bool:
+	var d: Dictionary = Db.SKILLS[id]
+	return not d.has("chars") or d.chars.has(run.char)
+
+func unlock_char(id: String) -> bool:
+	if meta.chars.get(id, false):
+		return false
+	meta.chars[id] = true
+	save_meta()
+	return true
 
 func next_chapter() -> void:
 	run.chapter += 1
@@ -169,13 +193,17 @@ func has(id: String) -> bool:
 
 func remove_skill(id: String) -> void:
 	run.skills.erase(id)
+	if id == "m_power":
+		run.max_weapons += 1
 	if id == "razor":   # 剃刀边缘被遗忘：心的上限恢复
-		run.max_hearts = maxi(1, 5 + (1 if has("charm") else 0) - (2 if has("greed") else 0))
+		run.max_hearts = maxi(1, cdef().hearts + (1 if has("charm") else 0) - (2 if has("greed") else 0))
 
 func add_skill(id: String) -> void:
 	if id == "" or has(id):
 		return
 	run.skills.append(id)
+	if id == "m_power":
+		run.max_weapons = maxi(1, run.max_weapons - 1)
 	if id == "razor":
 		run.max_hearts = 2
 		run.hearts = mini(run.hearts, 2)
@@ -221,10 +249,30 @@ func dmg_mult() -> float:
 		m += 0.5
 	if has("berserk"):
 		m += 0.12 * (run.max_hearts - run.hearts)
+	if has("m_speed") and not focus_on:
+		m += 0.2
+	if has("m_blaze") and combo >= 10:
+		m += 0.15
+	if mush == 0:
+		m += 0.3
+	m *= cdef().dmg
+	if has("m_power"):
+		m *= 1.5
 	if has("sniper"):
 		m *= 2.4
 	if has("puppeteer"):
 		m *= 0.6
+	return m
+
+## 移动速度倍率（键盘是速度，触屏是手指位移的放大倍数）
+func speed_mult() -> float:
+	var m: float = cdef().speed
+	if has("fan"):
+		m *= 1.15
+	if has("m_blaze") and combo >= 10:
+		m *= 1.2
+	if mush == 1:
+		m *= 1.25
 	return m
 
 ## 使魔：数量与单发伤害（不受自机伤害加成中的「人形师」惩罚）
@@ -293,7 +341,7 @@ func card_pool() -> Array:
 				cands.append({"kind": "new", "id": id})
 	if run.skills.size() < run.max_skills:
 		for id in Db.SKILLS:
-			if not has(id):
+			if not has(id) and skill_ok(id):
 				cands.append({"kind": "skill", "id": id})
 	# 符札改造：每张攻符最多 2 个
 	for w in run.weapons:

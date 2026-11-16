@@ -112,6 +112,68 @@ static func run(e, id: String, dt: float, b) -> void:
 			if every(e, "b", 0.85, dt):
 				ring(b, P, 14, 44.0, t * 0.6, 4, 5)
 		# ---------------------------------------------------------------- 第二章
+		"saku0":
+			if every(e, "a", 0.5, dt):
+				e.tm["z"] = -e.tm.get("z", 1.0)
+				fan(b, P, aim(b, P) + 0.12 * e.tm["z"], 5, 0.7, 90.0, 3, 1)
+			if every(e, "b", 2.2, dt):
+				ring(b, P, 20, 55.0, randf() * TAU, 3, 6)
+		"alice1":  # 咒符「上海人偶」：四个人偶绕着爱丽丝转并各自开火，打掉人偶可以减轻火力
+			if not e.tm.has("dolls"):
+				e.tm["dolls"] = true
+				for i in 4:
+					b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": TAU * i / 4.0, "r": 36.0}, b.get_meta("hp_mult"))
+			if every(e, "a", 1.3, dt):
+				ring(b, P, 20, 46.0, t * 0.7, 0, 1)
+				ring(b, P, 20, 34.0, -t * 0.7, 2, 5)
+		"alice2":  # 战符「小小军势」：一排排札弹列队行军，缺口像蛇一样左右摆动
+			if every(e, "a", 0.75, dt):
+				var g: int = clampi(e.tm.get("g", 5) + randi_range(-1, 1), 1, 8)
+				e.tm["g"] = g
+				e.tm["row"] = e.tm.get("row", 0) + 1
+				for i in 11:
+					if i == g or i == g + 1:
+						continue
+					b.bullets.add(Vector2((i + 0.5) / 11.0 * G.FIELD_W, -4), Vector2(0, 44), 6, 1 if int(e.tm["row"]) % 2 == 0 else 5)
+			if every(e, "b", 1.6, dt):
+				fan(b, P, aim(b, P), 3, 0.4, 84.0, 3, 3)
+		"alice3":  # 咒诅「魔彩光的上海人偶」：五个人偶各自射出缓缓转动的彩色激光
+			if not e.tm.has("dolls"):
+				e.tm["dolls"] = true
+				for i in 5:
+					b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": TAU * i / 5.0, "r": 42.0}, b.get_meta("hp_mult"))
+			if not e.tm.has("_las"):
+				e.tm["_las"] = 1.0
+			if every(e, "_las", 4.2, dt):
+				var ci := 0
+				for en in b.enemies.list:
+					if en.owner == e and not en.dead:
+						b.bullets.laser(en.pos, (en.pos - P).angle(), 320.0, 4.5, 1.2, 1.8, ci % 7, 0.22, en)
+						ci += 1
+			if every(e, "a", 0.11, dt):
+				shot(b, P, t * 1.9, 52.0, 2, int(t * 3.0) % 6)
+				shot(b, P, t * 1.9 + PI, 52.0, 2, int(t * 3.0 + 3) % 6)
+		"patb1":  # 火符「火神之光」：五条火焰旋臂
+			if every(e, "a", 0.07, dt):
+				for k in 5:
+					var bl = shot(b, P, t * 1.5 + k * TAU / 5.0, 54.0, 2, 0)
+					bl.w = 0.45
+			if every(e, "b", 1.7, dt):
+				fan(b, P, aim(b, P), 3, 0.3, 78.0, 1, 3)
+		"patb3":  # 日符「皇家烈焰」：一圈圈向外加速的烈焰 + 缓慢转动的日冕激光
+			if every(e, "a", 0.8, dt):
+				e.tm["n"] = e.tm.get("n", 0) + 1
+				var n3: int = e.tm["n"]
+				for bl in ring(b, P, 26, 14.0, n3 * 0.12, 0 if n3 % 2 == 0 else 1, 0 if n3 % 2 == 0 else 3):
+					bl.acc = bl.vel.normalized() * 34.0
+					bl.maxs = 74.0
+			if not e.tm.has("_c"):
+				e.tm["_c"] = 2.0
+			if every(e, "_c", 6.5, dt):
+				e.tm["lr"] = -e.tm.get("lr", -0.12)
+				var off6 := randf() * TAU
+				for i in 6:
+					b.bullets.laser(P, off6 + i * TAU / 6.0, 420.0, 6.0, 1.5, 2.4, 3, e.tm["lr"], e)
 		"mei0":
 			if every(e, "a", 0.45, dt):
 				e.tm["n"] = e.tm.get("n", 0) + 1

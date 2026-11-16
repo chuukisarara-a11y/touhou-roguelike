@@ -175,6 +175,15 @@ func _draw() -> void:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.8, 0.4, 0.12))
 		else:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.85, 0.5, 0.75 * z[4] / 0.25))
+	if battle.spark_t > 0.0:   # 极限火花
+		var sw: float = battle.spark_w * minf(1.0, battle.spark_t * 4.0) * (1.0 + 0.06 * sin(battle.spark_t * 50.0))
+		var sx: float = p.position.x
+		var sy: float = p.position.y - 8.0
+		var hue := fmod(battle.spark_t * 1.5, 1.0)
+		draw_rect(Rect2(sx - sw / 2.0 - 5, -10, sw + 10, sy + 10), Color.from_hsv(hue, 0.6, 1.0, 0.35))
+		draw_rect(Rect2(sx - sw / 2.0, -10, sw, sy + 10), Color.from_hsv(fmod(hue + 0.15, 1.0), 0.35, 1.0, 0.8))
+		draw_rect(Rect2(sx - sw * 0.3, -10, sw * 0.6, sy + 10), Color(1, 1, 1, 0.95))
+		draw_circle(Vector2(sx, sy), sw * 0.6, Color(1, 1, 1, 0.9))
 	var gt := G.tex("gap")
 	for g in gaps:
 		draw_texture(gt, (g[0] - gt.get_size() / 2.0), Color(1, 1, 1, minf(1.0, g[1] * 4.0)))

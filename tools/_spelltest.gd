@@ -7,7 +7,7 @@ var maxb := 0
 var fps_min := 999
 func _ready() -> void:
 	G.dev_god = true
-	for id in (["kaguya", "yukari"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
+	for id in (["alice", "patchouli_b"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
 		for i in Db.BOSSES[id].phases.size():
 			queue.append([id, i])
 	_next()
@@ -20,7 +20,7 @@ func _next() -> void:
 	for c in Db.CHAPTERS:
 		if Db.CHAPTERS[c].boss == cur[0] or Db.CHAPTERS[c].elites.has(cur[0]):
 			ch = c
-	G.new_run()
+	G.new_run("marisa")
 	for i in range(1, ch):
 		G.next_chapter()
 	G.run.floor = 8
@@ -44,7 +44,7 @@ func _process(dt: float) -> void:
 	if t > 1.5:
 		maxb = maxi(maxb, b.bullets.list.size())
 		fps_min = mini(fps_min, Engine.get_frames_per_second())
-	for st in ([5.0] if not OS.get_cmdline_user_args().has("--few") else [6.2, 7.0]):
+	for st in ([5.0] if not OS.get_cmdline_user_args().has("--few") else [4.0, 6.5]):
 		if t > st and t < st + dt * 1.5:
 			get_viewport().get_texture().get_image().save_png("/tmp/spx/sp_%s_%d%s.png" % [cur[0], cur[1], "" if st == 5.0 else "_%d" % int(st * 10)])
 	if t > (5.3 if not OS.get_cmdline_user_args().has("--few") else 7.3):

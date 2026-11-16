@@ -21,6 +21,7 @@ func drop_points(pts: Array) -> void:
 func tick(dt: float, battle) -> void:
 	var pp: Vector2 = battle.player.position
 	var h: float = battle.field_h
+	var poc: bool = G.has("m_collect") and pp.y < h * 0.45
 	for it in list:
 		it[3] += dt
 		var d: float = it[0].distance_to(pp)
@@ -28,7 +29,7 @@ func tick(dt: float, battle) -> void:
 			it[0] = it[0].move_toward(pp, (260.0 + it[3] * 300.0) * dt)
 			if d < 7.0:
 				it[2] = "got_point"
-		elif magnet_all or d < (85.0 if G.has("magnet") else 34.0):
+		elif magnet_all or poc or d < (85.0 if G.has("magnet") else 34.0):
 			it[0] = it[0].move_toward(pp, 260.0 * dt)
 			if d < 7.0:
 				it[2] = "got_" + it[2]

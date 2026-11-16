@@ -25,12 +25,19 @@ func _pick() -> Dictionary:
 	if _id == "clue" or (run.chapter == 3 and not run.sh[2] and not run.seen_ev.has("竹林里的纸人")):
 		run.seen_ev.append("竹林里的纸人")
 		return Db.CLUE_EVENT
-	var pool := Db.EVENTS.filter(func(e): return (not e.has("ch") or e.ch.has(run.chapter)) and not run.seen_ev.has(e.title))
+	var skip: Array = Db.EVENT_SKIP.get(run.char, [])
+	var pool := Db.EVENTS.filter(func(e): return (not e.has("ch") or e.ch.has(run.chapter)) and not run.seen_ev.has(e.title) and not skip.has(e.title))
 	if pool.is_empty():
 		pool = Db.EVENTS.filter(func(e): return not e.has("ch") or e.ch.has(run.chapter))
 	var e: Dictionary = pool[G.rng.randi_range(0, pool.size() - 1)]
 	run.seen_ev.append(e.title)
 	return e
+
+## 把称呼换成当前角色的
+func _me(t: String) -> String:
+	if G.run.char == "marisa":
+		return t.replace("巫女大人", "魔法使小姐").replace("巫女姐姐", "魔法使姐姐").replace("博丽的巫女", "黑白的魔法使").replace("巫女", "魔法使")
+	return t
 
 func _finish() -> void:
 	if _free:
@@ -49,6 +56,18 @@ func _ready() -> void:
 		G.see("rinnosuke")
 	UI.label(self, ev.title, 90, 12, Color(0.7, 1.0, 0.75))
 	_talk = ev.get("talk", [])
+	if G.run.char != "reimu":   # 换成当前角色的台词
+		var rep: Array = Db.EVENT_LINES.get(G.run.char, {}).get(ev.title, [])
+		var k := 0
+		var out := []
+		for ln in _talk:
+			if ln[0] == "灵梦":
+				if k < rep.size():
+					out.append([G.cdef().short, rep[k]])
+					k += 1
+			else:
+				out.append([ln[0].replace("灵梦", G.cdef().short), _me(ln[1])])
+		_talk = out
 	_line = UI.label(self, "", 108, 12, Color(0.92, 0.92, 1.0), 10)
 	_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_line.size.y = 60
@@ -153,7 +172,7 @@ func _choose(ch: Dictionary) -> void:
 					lines.append("%s 强化到了 Lv%d" % [Db.WEAPONS[w.id].name, w.lv])
 	if lines.is_empty():
 		lines.append("什么也没有得到。" if ch.has("alt") else "……")
-	_line.text = ch.get("say", "")
+	_line.text = _me(ch.get("say", ""))
 	UI.fit(_line, 20.0)
 	_res_y = maxf(_res_y, _line.position.y + UI.text_h(_line.text, _line.size.x, 10) + 6.0)
 	for b in _buttons:

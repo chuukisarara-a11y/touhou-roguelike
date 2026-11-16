@@ -21,6 +21,8 @@ var speed_s := 99.0     # 平滑后的移动速度
 var focus_t := 0.0
 var guard := false      # 「不动明王」的护盾
 var guard_cd := 0.0
+var trail_cd := 0.0
+var sat_cd := 0.0
 
 var _sprite: Sprite2D
 var _hit: Sprite2D
@@ -28,7 +30,7 @@ var _t := 0.0
 
 func _ready() -> void:
 	_sprite = Sprite2D.new()
-	_sprite.texture = G.tex("c_reimu")
+	_sprite.texture = G.tex("c_" + G.run.char)
 	add_child(_sprite)
 	_hit = Sprite2D.new()
 	_hit.texture = G.tex("hitbox")
@@ -46,9 +48,10 @@ func tick(dt: float, real_dt: float, battle) -> void:
 		return
 	var v := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	focused = Input.is_action_pressed("slow")
-	var sp := (SLOW_SPEED if focused else SPEED) * (1.15 if G.has("fan") else 1.0)
+	var sm: float = G.speed_mult() * (0.5 if (battle.spark_t > 0.0 and not G.has("m_comet")) else 1.0)
+	var sp := (SLOW_SPEED if focused else SPEED) * sm
 	var before := position
-	position += v * sp * real_dt + touch_delta
+	position += v * sp * real_dt + touch_delta * sm
 	touch_delta = Vector2.ZERO
 	position.x = clampf(position.x, 7.0, G.FIELD_W - 7.0)
 	position.y = clampf(position.y, 12.0, battle.field_h - 12.0)
@@ -76,6 +79,17 @@ func tick(dt: float, real_dt: float, battle) -> void:
 					fm[1] = 0.8
 					battle.fx.spark(bl.pos, Color(0.7, 0.9, 1.0))
 					break
+	# 魔理沙：星屑轨迹 / 卫星幻觉
+	trail_cd -= dt
+	if G.has("m_star_trail") and speed_s > 60.0 and trail_cd <= 0.0 and battle.state == "play":
+		trail_cd = 0.1
+		battle.shots.spawn("star", position + Vector2(0, 6), Vector2(0, 0.01), 7.0 * G.dmg_mult(), {"pierce": 99, "life": 1.0})
+	if G.has("m_orbit") and battle.state == "play":
+		sat_cd -= dt
+		if sat_cd <= 0.0:
+			sat_cd = 0.8
+			for i in 4:
+				battle.shots.spawn("star", position + Vector2.from_angle(orb_ang * 0.8 + TAU * i / 4.0) * 20.0, Vector2(0, -240.0), 4.0 * G.dmg_mult())
 	fam_cd -= dt
 	if nf > 0 and fam_cd <= 0.0 and battle.state == "play":
 		fam_cd = 0.5 / (2.0 if G.has("puppeteer") else 1.0)
@@ -125,6 +139,10 @@ func _draw() -> void:
 	var yt := G.tex("yinyang")
 	for o in orbs:
 		draw_texture(yt, (o[0] - position - yt.get_size() / 2.0))
+	if G.has("m_orbit"):
+		var st := G.tex("star")
+		for i in 4:
+			draw_texture(st, Vector2.from_angle(orb_ang * 0.8 + TAU * i / 4.0) * 20.0 - st.get_size() / 2.0)
 	if G.focus_on:
 		draw_arc(Vector2.ZERO, 7.0, 0, TAU, 20, Color(1, 1, 1, 0.35), 1.0)
 	if guard:

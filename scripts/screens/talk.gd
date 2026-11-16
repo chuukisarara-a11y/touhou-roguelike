@@ -19,17 +19,22 @@ var h := 356.0
 func setup(arg: Dictionary) -> void:
 	boss_id = arg.boss
 	kind = arg.get("kind", "boss")
-	var d: Dictionary = Db.TALKS[boss_id]
-	lines = d.lines
+	var by: Dictionary = Db.TALKS_BY.get(G.run.char, {})
+	var d: Dictionary = by.get(boss_id, Db.TALKS.get(boss_id, {"lines": [], "choices": []}))
+	lines = d.lines.duplicate()
 	choices = d.choices
+	# 特定构筑遇到特定 Boss：多说几句
+	for x in Db.TALK_EXTRA:
+		if x.char == G.run.char and x.boss == boss_id and (G.weapon(x.need) != null or G.has(x.need)):
+			lines.append_array(x.lines)
 
 func _ready() -> void:
 	h = G.field_h()
 	G.see(Db.BOSSES[boss_id].tex.trim_prefix("c_"))
 	var bg := UI.backdrop(self)
-	bg.mode = Db.CHAPTERS[G.run.chapter].bg
+	bg.mode = G.chap(G.run.chapter).bg
 	var py := h - 96 - 118
-	_left = UI.picture(self, "p_reimu", py)
+	_left = UI.picture(self, "p_" + G.run.char, py)
 	_left.position.x = -6
 	_left.flip_h = true
 	_right = UI.picture(self, "p_" + Db.BOSSES[boss_id].tex.trim_prefix("c_"), py)
@@ -56,8 +61,8 @@ func _ready() -> void:
 	_advance()
 
 func _say(who: String, text: String) -> void:
-	var is_me := who == "reimu"
-	_name.text = "博丽灵梦" if is_me else Db.BOSSES[boss_id].name
+	var is_me := who == "reimu" or who == "me"
+	_name.text = G.cdef().name if is_me else Db.BOSSES[boss_id].name
 	_text.text = text
 	UI.fit(_text, 62.0)
 	_text.visible_ratio = 0.0
@@ -83,6 +88,9 @@ func _advance() -> void:
 	if idx < lines.size():
 		_say(lines[idx][0], lines[idx][1])
 		Au.sfx("click", -6.0)
+	elif choices.is_empty():
+		_chosen = true
+		_advance()
 	else:
 		_show_choices()
 

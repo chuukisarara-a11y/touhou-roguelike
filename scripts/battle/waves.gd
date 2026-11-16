@@ -5,7 +5,7 @@ class_name Waves
 static var _mobs := ["fairy", "fairy_red", "bigfairy", "kedama"]
 
 static func build(chapter: int, floor_i: int, kind: String) -> Array:
-	var ch: Dictionary = Db.CHAPTERS[chapter]
+	var ch: Dictionary = G.chap(chapter)
 	if kind == "boss":
 		return [[{"t": 0.0, "boss": ch.boss}]]
 	if kind == "elite":

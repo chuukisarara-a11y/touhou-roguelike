@@ -2,7 +2,7 @@ class_name Dev
 ## 开发者菜单：跳章、直接打 Boss、无敌、素材一览、局内作弊。
 
 static func open(parent: Node) -> void:
-	var ov := UI.Overlay.new("开发者菜单", 300.0)
+	var ov := UI.Overlay.new("开发者菜单", 350.0)
 	parent.add_child(ov)
 	ov.add_label("从某章开头开始（自动给一套构筑）", Color(0.8, 0.8, 0.95))
 	var row := Control.new()
@@ -12,6 +12,14 @@ static func open(parent: Node) -> void:
 		var n := i + 1
 		UI.button(row, "第%d章" % n, 0, func(): ov.close(); G.main.dev_start_chapter(n), 22.0, false, {}, 8 + i * 46, 42)
 	ov.y += 28
+	var cb := []
+	cb.append(ov.add_button("试玩角色：" + Db.CHARS[G.meta.get("dev_char", "reimu")].name, func():
+		var ks := Db.CHARS.keys()
+		G.meta["dev_char"] = ks[(ks.find(G.meta.get("dev_char", "reimu")) + 1) % ks.size()]
+		UI.set_text(cb[0], "试玩角色：" + Db.CHARS[G.meta.dev_char].name)))
+	ov.add_button("解锁全部角色", func():
+		for k in Db.CHARS: G.meta.chars[k] = true
+		G.save_meta(); Au.sfx("win"))
 	ov.add_button("直接打 Boss / 精英 ▶", func(): ov.close(); _pick_boss(parent))
 	var box := []
 	box.append(ov.add_button("无敌：" + ("开" if G.dev_god else "关"), func():

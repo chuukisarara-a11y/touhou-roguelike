@@ -42,6 +42,10 @@ var afterglow_t := 0.0
 var counter_cd := 0.0
 var phase_clean := true
 var defeat_line := ""
+var spark_t := 0.0      # 极限火花剩余秒数
+var spark_w := 0.0
+var spark_dps := 0.0
+var missile_cd := 2.0
 var spell_bg: SpellBg
 var timestop := 0.0      # 时间停止剩余秒数（咲夜）：期间除 Boss 外一切静止，自机不能动
 var ts_real := 0.0
@@ -63,10 +67,17 @@ func _ready() -> void:
 	slow_budget = slow_max()
 	if G.has("bomb_start"):
 		add_bomb(0.5)
+	G.mush = -1
+	if G.has("m_mushroom"):
+		G.mush = randi() % 3
+		if G.mush == 2:
+			add_bomb(1.0)
+		banner = ["蘑菇：伤害提升", "蘑菇：速度提升", "蘑菇：符卡 +1"][G.mush]
+		banner_t = 1.6
 	if kind == "boss" and G.has("phoenix"):
 		G.heal(1)
 	spell_bg = SpellBg.new(); spell_bg.battle = self; add_child(spell_bg)
-	bg.mode = Db.CHAPTERS[G.run.chapter].bg
+	bg.mode = G.chap(G.run.chapter).bg
 	enemies = EnemyLayer.new(); add_child(enemies)
 	items = ItemLayer.new(); add_child(items)
 	shots = ShotLayer.new(); add_child(shots)
@@ -150,6 +161,13 @@ func _process(real_dt: float) -> void:
 	counter_cd -= dt
 	spell_bg.tick(dt)
 	player.tick(dt, real_dt, self)
+	if spark_t > 0.0:
+		_tick_spark(dt)
+	if G.has("m_missile") and state == "play":
+		missile_cd -= dt
+		if missile_cd <= 0.0 and enemies.alive() > 0:
+			missile_cd = 3.0
+			shots.spawn("orb", player.position, Vector2(0, -320.0), 32.0 * G.dmg_mult(), {"homing": 16.0, "radius": 6.0, "life": 3.0})
 	if state == "play":
 		_tick_waves(dt)
 	enemies.tick(dt, self)
@@ -251,6 +269,28 @@ func _win() -> void:
 	banner = "胜利"
 	banner_t = 1.6
 
+## 极限火花：自机正前方的光炮，持续伤害并抹掉光束里的敌弹
+func _tick_spark(dt: float) -> void:
+	spark_t -= dt
+	var px: float = player.position.x
+	var py: float = player.position.y
+	for en in enemies.list:
+		if en.dead:
+			continue
+		if en.pos.y < py and absf(en.pos.x - px) < spark_w / 2.0 + en.radius:
+			en.hurt(spark_dps * dt, self)
+		elif G.has("m_comet") and en.pos.distance_to(player.position) < 20.0:
+			en.hurt(260.0 * G.dmg_mult() * dt, self)
+	var k := 0
+	for bl in bullets.list:
+		if not bl.dead and bl.pos.y < py and absf(bl.pos.x - px) < spark_w / 2.0:
+			bl.dead = true
+			k += 1
+			if k % 3 == 0:
+				items.drop_points([bl.pos])
+	player.invuln = maxf(player.invuln, 0.3)
+	shake = maxf(shake, 0.06)
+
 func slow_max() -> float:
 	return SLOW_MAX * (2.0 if G.has("bullet_time") else 1.0)
 
@@ -292,6 +332,8 @@ func on_point() -> void:
 		fx.text(player.position + Vector2(0, -18), "灵压 Lv%d" % lv, Color(0.6, 0.95, 1.0))
 	if G.has("cycle"):
 		add_bomb(0.006)
+	if G.has("m_collect"):
+		add_bomb(0.003)
 
 ## 把消掉的敌弹变成灵点
 func _clear_to_points() -> int:
@@ -313,6 +355,8 @@ func on_enemy_killed(e) -> void:
 		Pat.ring(self, e.pos, 12, 62.0, randf() * TAU, 0, 0)
 		fx.burst(e.pos, Color(1, 0.5, 0.4), 16, 34.0)
 	Weapons.on_kill(self)
+	if G.has("m_borrow") and randf() < 0.25:
+		items.drop_coins(e.pos, 1)
 	if e.ice_mark:
 		bullets.clear_near(e.pos, 45.0, fx)
 	if e.is_boss:
@@ -334,6 +378,9 @@ func on_boss_phase(e) -> void:
 	_spell_result(e.phases[e.phase_i - 1])
 	hud.cutin("p_" + e.def.tex.trim_prefix("c_"))
 	Au.sfx("phase")
+	for en in enemies.list:   # Boss 召唤的人偶随符卡一起退场
+		if en.owner == e:
+			en.gone = true
 	_clear_to_points()
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
 	items.drop_coins(e.pos, 8)
@@ -406,6 +453,9 @@ func use_bomb() -> void:
 	var k := int(floorf(G.run.bomb))
 	if k < 1 or state != "play":
 		return
+	if G.has("m_final") and G.run.bomb < G.bomb_max():
+		fx.text(player.position + Vector2(0, -18), "还没存满", Color(1, 0.8, 0.5))
+		return
 	k = mini(k, 3)
 	G.run.bomb -= k
 	phase_clean = false
@@ -418,7 +468,14 @@ func use_bomb() -> void:
 		bullet_slow_t = 3.0
 	if G.has("afterglow"):
 		afterglow_t = 4.0
-	var orbs: int = [0, 8, 14, 22][k]
+	if G.run.char == "marisa":
+		var fin := 1.5 if G.has("m_final") else 1.0
+		var plus := G.has("m_spark_plus")
+		spark_t = [0.0, 2.0, 3.0, 4.2][k] * (1.6 if plus else 1.0) * fin
+		spark_w = [0.0, 30.0, 42.0, 58.0][k] * (1.3 if plus else 1.0) * fin
+		spark_dps = [0.0, 150.0, 190.0, 240.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * (3.0 if G.has("m_final") else 1.0)
+		player.invuln = maxf(player.invuln, spark_t + 0.5)
+	var orbs: int = [0, 8, 14, 22][k] if G.run.char == "reimu" else 0
 	G.after_t = 5.0
 	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0)
 	if G.has("bomb_shock"):
@@ -437,7 +494,7 @@ func use_bomb() -> void:
 		bullet_slow_t = maxf(bullet_slow_t, 2.5)
 	fx.burst(player.position, Color(1, 0.5, 0.6), 20 + 15 * k, 40.0 + 25.0 * k)
 	shake = 0.15 + 0.1 * k
-	banner = BOMB_NAMES[k]
+	banner = G.cdef().bombs[k]
 	banner_t = 1.0 + 0.3 * k
 
 func bot_step() -> void:

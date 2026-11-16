@@ -12,6 +12,7 @@ const SCREENS := {
 	"result": "res://scripts/screens/result.gd",
 	"talk": "res://scripts/screens/talk.gd",
 	"gallery": "res://scripts/screens/gallery.gd",
+	"chars": "res://scripts/screens/chars.gd",
 	"assets": "res://scripts/screens/assets.gd",
 }
 
@@ -33,7 +34,7 @@ func _ready() -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
 	goto("title")
-	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest"]:   # 开发用的自动测试脚本
+	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest", "_chartest"]:   # 开发用的自动测试脚本
 		if OS.get_cmdline_user_args().has("--" + tn.trim_prefix("_")):
 			add_child(load("res://tools/%s.gd" % tn).new())
 
@@ -58,7 +59,7 @@ func goto(name: String, arg := {}) -> void:
 ## 各界面对应的 BGM 槽位（文件放在 assets/music/ 下，缺文件则静音）
 func _pick_bgm(name: String, arg: Dictionary) -> void:
 	match name:
-		"title", "gallery", "assets":
+		"title", "gallery", "assets", "chars":
 			Au.bgm("title")
 		"talk":
 			Au.bgm("")
@@ -70,9 +71,9 @@ func _pick_bgm(name: String, arg: Dictionary) -> void:
 		_:
 			Au.bgm("map")
 
-func start_run() -> void:
+func start_run(ch := "reimu") -> void:
 	G.clear_run()
-	G.new_run()
+	G.new_run(ch)
 	G.meta.runs += 1
 	G.save_meta()
 	goto("map")
@@ -85,7 +86,7 @@ func continue_run() -> void:
 
 ## 开发者：从第 n 章开头开始，并给一套像样的构筑
 func dev_start_chapter(n: int) -> void:
-	G.new_run()
+	G.new_run(G.meta.get("dev_char", "reimu"))
 	var ids := ["amulet", "needle", "laser", "yinyang"]
 	G.run.weapons = []
 	for id in ids:
@@ -100,13 +101,13 @@ func dev_start_chapter(n: int) -> void:
 func dev_fight(boss_id: String) -> void:
 	var ch := 1
 	for c in Db.CHAPTERS:
-		if Db.CHAPTERS[c].boss == boss_id or Db.CHAPTERS[c].elites.has(boss_id):
+		if G.chap(c).boss == boss_id or G.chap(c).elites.has(boss_id):
 			ch = c
 	dev_start_chapter(ch)
 	G.run.floor = 8
 	G.run.pos = G.run.map.size() - 1
-	if Db.TALKS.has(boss_id):
-		goto("talk", {"boss": boss_id, "kind": "boss" if Db.CHAPTERS[ch].boss == boss_id else "elite"})
+	if true:
+		goto("talk", {"boss": boss_id, "kind": "boss" if G.chap(ch).boss == boss_id else "elite"})
 	else:
 		goto("battle", {"kind": "elite", "boss": boss_id})
 
@@ -124,10 +125,10 @@ func enter_node(i: int) -> void:
 				run.money += 25
 				battle_done({"kind": "battle", "no_hit": false, "earned": 25, "skipped": true})
 			elif node.type == "boss":
-				goto("talk", {"boss": Db.CHAPTERS[run.chapter].boss})
+				goto("talk", {"boss": G.chap(run.chapter).boss})
 				return
 			elif node.type == "elite":
-				var el: Array = Db.CHAPTERS[run.chapter].elites
+				var el: Array = G.chap(run.chapter).elites
 				goto("talk", {"boss": el[G.rng.randi_range(0, el.size() - 1)], "kind": "elite"})
 			else:
 				goto("battle", {"kind": node.type})
@@ -137,6 +138,8 @@ func enter_node(i: int) -> void:
 func battle_done(info: Dictionary) -> void:
 	var run: Dictionary = G.run
 	run.battles += 1
+	if info.kind == "boss" and run.chapter == 1 and G.unlock_char("marisa"):
+		info["unlock"] = "雾雨魔理沙"
 	# 第一章的境界碎片：无伤击破精英
 	if info.kind == "elite":
 		if run.chapter == 1 and not run.sh[0]:

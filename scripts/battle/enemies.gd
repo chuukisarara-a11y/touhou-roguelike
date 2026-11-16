@@ -94,7 +94,7 @@ func spawn(kind: String, move: Dictionary, hp_mult: float, opts := {}) -> Enemy:
 	e.tex = d.tex
 	e.anim = d.get("anim", false)
 	if e.tex.begins_with("@"):   # 借用本章杂鱼的外观
-		var mk: String = Db.CHAPTERS[G.run.chapter].mobs[int(e.tex.substr(1))]
+		var mk: String = G.chap(G.run.chapter).mobs[int(e.tex.substr(1))]
 		e.tex = Db.ENEMIES[mk].tex
 		e.anim = Db.ENEMIES[mk].get("anim", false)
 	e.tint = d.get("tint", Color.WHITE)
