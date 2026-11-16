@@ -24,32 +24,17 @@ func _ready() -> void:
 	UI.backdrop(self)
 	UI.status(self)
 	UI.label(self, Db.CHAPTERS[G.run.chapter].name, 2, 12, Color(0.85, 0.8, 1.0), 52, 84)
-	_info = UI.label(self, "", h - 44, 12, Color(0.8, 0.8, 0.92), 4)
-	var ws := []
-	for w in G.run.weapons:
-		ws.append(G.weapon_label(w))
-	var rs := []
-	for r in G.run.relics:
-		rs.append(Db.RELICS[r].name)
-	_info.text = "符札：" + "、".join(ws) + ("\n宝具：" + "、".join(rs) if not rs.is_empty() else "")
 	var ex := []
 	if G.run.chapter <= 3:
 		var hint := ""
 		if not G.run.sh[G.run.chapter - 1]:
 			hint = ["　毫发无伤地战胜强敌", "　在弹幕的缝隙间游走（擦弹 %d/%d）" % [mini(G.run.grazes_ch, GAP_NEED), GAP_NEED], "　竹林里有谁留下了问题"][G.run.chapter - 1]
 		ex.append("碎片 %d/3%s" % [G.run.shards, hint])
-	if G.run.dolls > 0:
-		ex.append("替身人偶×%d" % G.run.dolls)
-	if G.run.shield > 0:
-		ex.append("护身结界×%d" % G.run.shield)
-	if not ex.is_empty():
-		_info.text += "\n" + "　".join(ex)
-	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_info.size.y = UI.text_h(_info.text, G.FIELD_W - 8.0)
-	_info.position.y = h - 4 - _info.size.y
-	_bottom = _info.position.y - 16.0
+	_info = UI.label(self, "".join(ex), h - 18, 12, Color(0.75, 0.68, 0.92), 4)
+	UI.button(self, Bag.summary(), h - 46, func(): Bag.open(self), 24.0)
+	_bottom = h - 46 - 16.0
 	if G.meta.dev:
-		Dev.map_tools(self, _info.position.y - 22)
+		Dev.map_tools(self, h - 46 - 22)
 		_bottom -= 22.0
 
 func _menu() -> void:

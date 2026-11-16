@@ -21,7 +21,24 @@ func _ready() -> void:
 		[1.0, func(): snap("assets")],
 		[0.2, func(): G.main.start_run()],
 		[0.9, func(): snap("map")],
-		[0.2, func(): G.main.enter_node(G.main.screen.reachable()[0])],
+		[0.1, func():
+			G.run.weapons = [{"id": "amulet", "lv": 3, "cd": 0.0, "mods": ["split", "rapid"], "awake": true}, {"id": "laser", "lv": 2, "cd": 0.0}, {"id": "yinyang", "lv": 1, "cd": 0.0}]
+			for k in ["counter", "afterglow", "shanghai", "reflect", "slow_shield"]: G.add_skill(k)
+			for k in ["hakkero", "tea", "laevatein", "slow_dmg", "bomb_big", "first_strike", "interest"]: G.add_relic(k)
+			G.run.power = 2; G.run.dolls = 1
+			G.main.goto("map")],
+		[0.8, func(): snap("map2"); Bag.open(G.main.screen)],
+		[0.8, func(): snap("bag"); Bag.detail(G.main.screen, "weapon", "amulet")],
+		[0.6, func(): snap("bag_weapon")],
+		[0.1, func():
+			for o in get_tree().get_nodes_in_group("overlay"): o.queue_free()
+			Bag.detail(G.main.screen, "skill", "reflect")],
+		[0.6, func(): snap("bag_skill")],
+		[0.1, func():
+			for o in get_tree().get_nodes_in_group("overlay"): o.queue_free()
+			G.main.goto("reward", {"kind": "battle", "no_hit": false, "earned": 20})],
+		[0.8, func(): snap("reward"); G.main.goto("map")],
+		[0.5, func(): G.main.enter_node(G.main.screen.reachable()[0])],
 		[2.0, func(): G.main.screen.pause()],
 		[0.6, func(): snap("pause")],
 		[0.1, func(): print("save exists=", G.has_save()); get_tree().paused = false; G.main.goto("title")],

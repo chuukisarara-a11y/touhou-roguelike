@@ -21,7 +21,7 @@ func _ready() -> void:
 	for c in G.roll_cards(2):
 		if c.kind == "money":
 			continue
-		var price := int((70 if c.kind == "new" else (80 if c.kind == "mod" else (60 if G.weapon(c.id).lv == 1 else 90))) * disc)
+		var price := int((70 if c.kind == "new" else ([70, 110, 160][Db.SKILLS[c.id].rar] if c.kind == "skill" else (80 if c.kind == "mod" else (60 if G.weapon(c.id).lv == 1 else 90)))) * disc)
 		y += _add(G.card_text(c), price, y, func(): G.apply_card(c), 36.0, false, G.card_icon(c))
 	var picked := []
 	for i in 2:
@@ -38,6 +38,8 @@ func _ready() -> void:
 	for w in G.run.weapons:
 		if w.lv >= 3 and not w.get("awake", false) and y2 < 100.0:
 			y2 += _add("觉醒·%s\n这张符札的伤害 +60%%" % Db.WEAPONS[w.id].name, int(240 * disc), y2, func(): w["awake"] = true, 36.0, false, G.card_icon({"kind": "up", "id": w.id}))
+	if G.run.max_skills < 8:
+		y2 += _add("秘符栏位 +1", int(160 * disc), y2, func(): G.run.max_skills += 1, 24.0, false, {}, true)
 	if G.run.max_weapons < 5:
 		y2 += _add("第五个符札栏位", int(300 * disc), y2, func(): G.run.max_weapons = 5, 24.0, false, {}, true)
 	y2 += _add("灵力结晶：伤害永久 +10%", int((150 + 50 * G.run.power) * disc), y2, func(): G.run.power += 1, 24.0, false, {}, true)

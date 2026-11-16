@@ -33,6 +33,8 @@ func _ready() -> void:
 	var rs := []
 	for r in run.relics:
 		rs.append(Db.RELICS[r].name)
+	for r in run.skills:
+		ws.append("〈%s〉" % Db.SKILLS[r].name)
 	var txt := "击破敌人：%d\n完成战斗：%d\n持有钱：%d\n\n符札：%s\n宝具：%s" % [run.kills, run.battles, run.money, "、".join(ws), "、".join(rs) if not rs.is_empty() else "无"]
 	var l := UI.label(self, txt, y, 12, Color(0.8, 0.8, 0.95), 10)
 	UI.button(self, "回到标题", minf(h - 36, l.position.y + l.size.y + 12), func(): G.main.goto("title"), 28.0)

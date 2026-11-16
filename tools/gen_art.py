@@ -726,6 +726,37 @@ m = m.filter(ImageFilter.GaussianBlur(7 * S))
 mist = Image.new("RGBA", m.size, (206, 220, 244, 255)); mist.putalpha(m)
 mist.save(os.path.join(OUT, "mist.png"))
 
+# 物品卡面背景（行囊与详情页用）：按流派配色，带一个淡淡的纹样
+def card_bg(key, c, motif):
+    d = Dr(24, 32, S)
+    for i in range(16):
+        k = i / 15
+        d.rect(0, i * 2, 24, i * 2 + 2, tuple(int(c[j] * (0.55 + 0.45 * (1 - k))) for j in range(3)))
+    m = light(c, 0.25)
+    motif(d, tuple(m[:3]))
+    d.rect(0, 0, 24, 1, light(c, 0.5)); d.rect(0, 31, 24, 32, dark(c, 0.5)); d.rect(0, 0, 1, 32, light(c, 0.3)); d.rect(23, 0, 24, 32, dark(c, 0.6))
+    d.save("card_" + key)
+def m_atk(d, c):
+    d.rect(7, 5, 17, 27, c); d.rect(8.5, 6.5, 15.5, 25.5, dark(c, 0.8))
+def m_graze(d, c):
+    for i in range(5):
+        d.line([(2 + i * 5, 30), (10 + i * 5, 2)], c, 0.6)
+def m_bomb(d, c):
+    d.ell(12, 16, 9, 9, c); d.ell(12, 16, 7.6, 7.6, dark(c, 0.8)); d.ell(12, 12, 2, 2, c); d.ell(12, 20, 2, 2, c)
+def m_burst(d, c):
+    for i in range(8):
+        a = i * math.pi / 4
+        d.poly([(12, 16), (12 + math.cos(a - 0.12) * 13, 16 + math.sin(a - 0.12) * 13), (12 + math.cos(a + 0.12) * 13, 16 + math.sin(a + 0.12) * 13)], c)
+def m_fam(d, c):
+    d.ell(12, 10, 4.5, 4.5, c); d.poly([(12, 13), (19, 27), (5, 27)], c)
+def m_slow(d, c):
+    d.poly([(2, 16), (12, 9), (22, 16), (12, 23)], c); d.ell(12, 16, 4, 4, dark(c, 0.75))
+def m_misc(d, c):
+    d.ell(12, 16, 8, 8, c); d.rect(9.5, 13.5, 14.5, 18.5, dark(c, 0.75))
+for key, col, mo in (("atk", (120, 70, 150), m_atk), ("graze", (50, 130, 160), m_graze), ("bomb", (160, 60, 80), m_bomb), ("burst", (180, 110, 50), m_burst),
+                     ("fam", (170, 90, 150), m_fam), ("slow", (60, 130, 90), m_slow), ("misc", (86, 92, 130), m_misc)):
+    card_bg(key, col, mo)
+
 # 应用图标
 ic = Dr(192, 192, 1)
 grad(ic, (46, 28, 96), (136, 56, 116), bands=24)

@@ -147,9 +147,12 @@ static func run(e, id: String, dt: float, b) -> void:
 				for bl in ring(b, P, 18, 12.0, randf() * TAU, 1, 1):
 					bl.acc = bl.vel.normalized() * 30.0
 					bl.maxs = 52.0
-			if every(e, "c", 3.2, dt):
+			if every(e, "_c", 5.0, dt):
+				# 两道激光从外八字合拢成竖直平行（预警阶段就停稳），保持 1.8 秒后消失
 				for s in [-1.0, 1.0]:
-					b.bullets.laser(P, PI / 2.0 + s * 0.6, 420.0, 7.0, 0.9, 1.4, 4, -s * 0.35, e)
+					var lz = b.bullets.laser(P + Vector2(s * 36.0, 0), PI / 2.0 - s * 0.6, 420.0, 7.0, 1.4, 1.8, 4, s * 0.6)
+					lz.stop_a = PI / 2.0
+					lz.has_stop = true
 		"saku1":  # 幻象「月神之钟」：正反两圈飞刀旋转 + 停住后瞄准自机的刀环
 			if every(e, "a", 0.42, dt):
 				ring(b, P, 18, 62.0, t * 0.9, 3, 1)

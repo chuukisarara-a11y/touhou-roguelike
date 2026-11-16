@@ -117,9 +117,13 @@ func load_run() -> bool:
 		return false
 	run = d.run
 	# 旧存档补上新版本才有的字段
-	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0]]:
+	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0], ["skills", []], ["max_skills", 6]]:
 		if not run.has(k[0]):
 			run[k[0]] = k[1]
+	for r in run.relics.duplicate():   # 旧版本里算宝具、现在是秘符的，挪过去
+		if Db.SKILLS.has(r):
+			run.relics.erase(r)
+			run.skills.append(r)
 	resume = {"screen": d.get("screen", "map"), "arg": d.get("arg", {})}
 	return true
 
@@ -137,7 +141,7 @@ func new_run() -> void:
 		"kills": 0, "battles": 0, "revived": false, "tea_kills": 0, "onigiri": 0,
 		"chapter_first": true,
 		"max_weapons": 4, "dolls": 0, "shield": 0, "power": 0, "shards": 0, "sh": [false, false, false],
-		"grazes_ch": 0, "seen_ev": [],
+		"grazes_ch": 0, "seen_ev": [], "skills": [], "max_skills": 6,
 	}
 	run.map = MapGen.generate(1)
 
@@ -157,8 +161,17 @@ func give_shard(ch: int) -> bool:
 	run.shards += 1
 	return true
 
-func has(relic: String) -> bool:
-	return run.relics.has(relic)
+## 是否持有某个宝具或秘符（效果代码统一用这个判断）
+func has(id: String) -> bool:
+	return run.relics.has(id) or run.skills.has(id)
+
+func add_skill(id: String) -> void:
+	if id == "" or has(id):
+		return
+	run.skills.append(id)
+	if id == "razor":
+		run.max_hearts = 2
+		run.hearts = mini(run.hearts, 2)
 
 func weapon(id: String):
 	for w in run.weapons:
@@ -232,9 +245,6 @@ func add_relic(id: String) -> void:
 	if id == "charm":
 		run.max_hearts += 1
 		run.hearts += 1
-	elif id == "razor":
-		run.max_hearts = 2
-		run.hearts = mini(run.hearts, 2)
 	elif id == "greed":
 		run.max_hearts = maxi(1, run.max_hearts - 2)
 		run.hearts = mini(run.hearts, run.max_hearts)
@@ -264,8 +274,8 @@ func _weighted(weights: Array) -> int:
 			return i
 	return weights.size() - 1
 
-## 生成 n 张奖励卡：{"kind": "new"/"up"/"money", "id": ...}
-func roll_cards(n: int) -> Array:
+## 当前所有可能出现的卡：{"kind": "new"/"up"/"mod"/"skill", "id": ...}
+func card_pool() -> Array:
 	var cands := []
 	for w in run.weapons:
 		if w.lv < 3:
@@ -274,7 +284,11 @@ func roll_cards(n: int) -> Array:
 		for id in Db.WEAPONS:
 			if weapon(id) == null:
 				cands.append({"kind": "new", "id": id})
-	# 符札改造：每张符札最多 2 个
+	if run.skills.size() < run.max_skills:
+		for id in Db.SKILLS:
+			if not has(id):
+				cands.append({"kind": "skill", "id": id})
+	# 符札改造：每张攻符最多 2 个
 	for w in run.weapons:
 		var have: Array = w.get("mods", [])
 		if have.size() >= 2:
@@ -290,11 +304,28 @@ func roll_cards(n: int) -> Array:
 			ok.append(mid)
 		if not ok.is_empty():
 			cands.append({"kind": "mod", "id": w.id, "mod": ok[rng.randi_range(0, ok.size() - 1)]})
+	return cands
+
+## 抽 n 张奖励卡：先按权重抽种类，再在种类里抽（秘符按稀有度加权）
+func roll_cards(n: int) -> Array:
+	var by := {}
+	for c in card_pool():
+		if not by.has(c.kind):
+			by[c.kind] = []
+		by[c.kind].append(c)
+	var kw := {"new": 3.0, "up": 3.0, "mod": 2.0, "skill": 3.5}
 	var out := []
-	while out.size() < n and not cands.is_empty():
-		var i := rng.randi_range(0, cands.size() - 1)
-		out.append(cands[i])
-		cands.remove_at(i)
+	while out.size() < n and not by.is_empty():
+		var kinds := by.keys()
+		var k: String = kinds[_weighted(kinds.map(func(x): return kw[x]))]
+		var arr: Array = by[k]
+		var i := rng.randi_range(0, arr.size() - 1)
+		if k == "skill":
+			i = _weighted(arr.map(func(c): return [6.0, 3.0, 1.2][Db.SKILLS[c.id].rar]))
+		out.append(arr[i])
+		arr.remove_at(i)
+		if arr.is_empty():
+			by.erase(k)
 	while out.size() < n:
 		out.append({"kind": "money", "id": ""})
 	return out
@@ -305,6 +336,8 @@ func apply_card(c: Dictionary) -> void:
 			run.weapons.append({"id": c.id, "lv": 1, "cd": 0.0})
 		"up":
 			weapon(c.id).lv += 1
+		"skill":
+			add_skill(c.id)
 		"mod":
 			var w: Dictionary = weapon(c.id)
 			if not w.has("mods"):
@@ -316,6 +349,9 @@ func apply_card(c: Dictionary) -> void:
 func card_text(c: Dictionary) -> String:
 	if c.kind == "money":
 		return "赛钱袋\n获得 25 钱"
+	if c.kind == "skill":
+		var sd: Dictionary = Db.SKILLS[c.id]
+		return "秘符·%s〔%s·%s〕\n%s" % [sd.name, sd.get("arch", "通用"), ["普通", "稀有", "史诗"][sd.rar], sd.desc]
 	var d: Dictionary = Db.WEAPONS[c.id]
 	if c.kind == "mod":
 		return "改造·%s〔%s〕\n%s" % [d.name, Db.MODS[c.mod].name, Db.MODS[c.mod].desc]
@@ -326,11 +362,13 @@ func card_text(c: Dictionary) -> String:
 
 func relic_text(id: String) -> String:
 	var d: Dictionary = Db.RELICS[id]
-	return "%s〔%s〕\n%s" % [d.name, ["普通", "稀有", "史诗"][d.rar], d.desc]
+	return "宝具·%s〔%s〕\n%s" % [d.name, ["普通", "稀有", "史诗"][d.rar], d.desc]
 
 func card_icon(c: Dictionary) -> Dictionary:
 	if c.kind == "money":
 		return {"tile": "tile_0", "tex": "coin"}
+	if c.kind == "skill":
+		return {"tile": "tile_%d" % Db.SKILLS[c.id].rar, "glyph": Db.SKILLS[c.id].g}
 	return {"tile": "tile_1" if c.kind == "mod" else "tile_w", "tex": Db.WEAPON_ICON.get(c.id, c.id)}
 
 func relic_icon(id: String) -> Dictionary:
@@ -338,7 +376,7 @@ func relic_icon(id: String) -> Dictionary:
 
 ## 给随机一张符札装上随机改造；返回说明文字（没有可装的返回 ""）
 func random_mod() -> String:
-	var c := roll_cards(40).filter(func(x): return x.kind == "mod")
+	var c := card_pool().filter(func(x): return x.kind == "mod")
 	if c.is_empty():
 		return ""
 	var pick: Dictionary = c[rng.randi_range(0, c.size() - 1)]

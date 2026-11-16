@@ -41,6 +41,8 @@ class Laser:
 	var rot := 0.0
 	var follow = null   # 跟随某个敌人
 	var graze_cd := 0.0
+	var has_stop := false   # 转到 stop_a 就停住
+	var stop_a := 0.0
 	var dead := false
 	func active() -> bool:
 		return t >= warn and t < warn + life
@@ -195,6 +197,9 @@ func _tick_lasers(dt: float, battle, pp: Vector2, graze_r: float, alive: bool) -
 	for l in lasers:
 		l.t += dt
 		l.a += l.rot * dt
+		if l.has_stop and ((l.rot > 0.0 and l.a >= l.stop_a) or (l.rot < 0.0 and l.a <= l.stop_a)):
+			l.a = l.stop_a
+			l.rot = 0.0
 		if l.follow != null:
 			if l.follow.dead:
 				l.dead = true

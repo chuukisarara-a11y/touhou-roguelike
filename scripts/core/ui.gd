@@ -271,6 +271,9 @@ class Scroll extends Control:
 	var _press := false
 	var _moved := 0.0
 	var _vel := 0.0
+	var _depth := -1   # 创建时已有几层弹出层；之后再多出来的才算「被挡住」
+	func _ready() -> void:
+		_depth = get_tree().get_nodes_in_group("overlay").size()
 	func _init(pos: Vector2, sz: Vector2) -> void:
 		position = pos
 		size = sz
@@ -286,7 +289,7 @@ class Scroll extends Control:
 	func scroll_by(dy: float) -> void:
 		content.position.y = clampf(content.position.y + dy, -_max_scroll(), 0.0)
 	func _blocked() -> bool:
-		return not get_tree().get_nodes_in_group("overlay").is_empty()
+		return get_tree().get_nodes_in_group("overlay").filter(func(o): return not o.is_queued_for_deletion()).size() > _depth
 	func _input(ev: InputEvent) -> void:
 		if not is_visible_in_tree() or _blocked():
 			_press = false
@@ -320,3 +323,50 @@ class Scroll extends Control:
 				Au.sfx("click")
 				t[1].call()
 				return
+
+# ---------------------------------------------------------------- 物品卡面
+const ARCH_KEY := {"擦弹": "graze", "符卡": "bomb", "爆发": "burst", "使魔": "fam", "低速": "slow"}
+const RAR_COL := [Color(0.72, 0.75, 0.9), Color(0.4, 0.7, 1.0), Color(1.0, 0.82, 0.35)]
+
+## 一张物品卡：kind = weapon / skill / relic。任意尺寸都能画（行囊里的小卡、详情页的大卡）
+class Card extends Control:
+	var kind := "relic"
+	var id := ""
+	func _init(k: String, i: String, sz: Vector2) -> void:
+		kind = k
+		id = i
+		size = sz
+		custom_minimum_size = sz
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var bgk := "atk"
+		var border := Color(0.8, 0.6, 1.0)
+		var d := {}
+		if kind != "weapon":
+			d = Db.SKILLS[id] if kind == "skill" else Db.RELICS[id]
+			bgk = UI.ARCH_KEY.get(d.get("arch", ""), "misc")
+			border = UI.RAR_COL[d.rar]
+		draw_texture_rect(G.tex("card_" + bgk), Rect2(Vector2.ZERO, size), false)
+		draw_rect(Rect2(Vector2.ZERO, size), border, false, maxf(1.0, size.x / 36.0))
+		if kind == "weapon":
+			var t := G.tex(Db.WEAPON_ICON.get(id, id))
+			var k := minf(size.x * 0.55 / t.get_width(), size.y * 0.55 / t.get_height())
+			var sz := t.get_size() * k
+			draw_texture_rect(t, Rect2((size - sz) / 2.0 - Vector2(0, size.y * 0.06), sz), false)
+			var w = G.weapon(id)
+			if w != null:
+				var n: int = w.lv
+				var r := maxf(1.5, size.x / 20.0)
+				for i in 3:
+					draw_circle(Vector2(size.x / 2.0 + (i - 1) * r * 3.0, size.y - r * 2.5), r, Color(1, 0.9, 0.5) if i < n else Color(0, 0, 0, 0.45))
+				var ms: Array = w.get("mods", [])
+				for i in ms.size():
+					draw_rect(Rect2(2 + i * (r * 2 + 1), 2, r * 2, r * 2), Color(0.5, 0.9, 1.0))
+				if w.get("awake", false):
+					draw_rect(Rect2(Vector2.ONE, size - Vector2(2, 2)), Color(1, 0.85, 0.3), false, 1.0)
+		else:
+			var fs := int(12 * maxf(1.0, floorf(size.x / 20.0)))
+			var gw := G.font.get_string_size(d.g, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			var pos := Vector2((size.x - gw) / 2.0, size.y / 2.0 + fs * 0.36)
+			draw_string(G.font, pos + Vector2(1, 1), d.g, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
+			draw_string(G.font, pos, d.g, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)

@@ -182,10 +182,11 @@ func pause() -> void:
 		return
 	get_tree().paused = true
 	move_finger = -1
-	var ov := UI.Overlay.new("暂停", 150.0)
+	var ov := UI.Overlay.new("暂停", 178.0)
 	add_child(ov)
 	_paused_ov = ov
 	ov.add_button("继续", unpause, 28.0)
+	ov.add_button("查看行囊", func(): Bag.open(ov))
 	ov.add_button("设置", func(): UI.open_settings(ov))
 	ov.add_button("保存并退出", func():
 		get_tree().paused = false

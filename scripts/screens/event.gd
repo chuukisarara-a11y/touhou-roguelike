@@ -120,7 +120,7 @@ func _choose(ch: Dictionary) -> void:
 				else:
 					lines.append(mt)
 			"weapon":
-				var cs := G.roll_cards(40).filter(func(x): return x.kind == "new")
+				var cs := G.card_pool().filter(func(x): return x.kind == "new")
 				if cs.is_empty():
 					G.run.money += 40
 					lines.append("符札栏已满，换成了 40 钱")
