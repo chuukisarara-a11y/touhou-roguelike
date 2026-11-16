@@ -21,7 +21,7 @@ func _ready() -> void:
 		UI.label(self, "真·异变解决" if true_end else "异变解决", y, 24, Color(1, 0.9, 0.6))
 		var msg := "境界被拨回了原位，漫长的夜晚终于结束。\n紫打着哈欠缩回了隙间里。"
 		if not true_end:
-			msg = "辉夜认输了，可月亮还是有点不对劲。\n（每章打倒一个精英能拿到境界碎片，一局集齐 3 片，就能追到幕后的人。本局 %d/3）" % G.run.shards
+			msg = "辉夜认输了，可月亮还是有点不对劲。\n（前三章各藏着一片境界碎片，获得方法都不一样。一局集齐 3 片，就能追到幕后的人。本局 %d/3）" % G.run.shards
 		body = UI.label(self, msg, y + 34, 12, Color(0.9, 0.9, 1.0), 10)
 	else:
 		UI.label(self, "满身疮痍", y, 24, Color(1, 0.45, 0.55))

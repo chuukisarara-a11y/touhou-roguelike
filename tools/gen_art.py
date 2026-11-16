@@ -452,6 +452,11 @@ for i, c in enumerate(COLS):
     atlas.rect(ox - 2.6, 98.6, ox + 2.6, 109.4, dk); atlas.rect(ox - 2.0, 99.2, ox + 2.0, 108.8, WHITE)
     atlas.rect(ox - 2.0, 99.2, ox + 2.0, 100.6, c); atlas.rect(ox - 2.0, 107.4, ox + 2.0, 108.8, c); atlas.rect(ox - 0.6, 101.8, ox + 0.6, 106.2, c)
 atlas.save("bullets")
+# 使魔（护盾型敌人的护卫）
+def b_fam(d):
+    d.ell(5, 5, 4.6, 4.6, (120, 70, 190)); d.ell(5, 5, 3.4, 3.4, (190, 140, 255)); d.ell(5, 5, 1.6, 2.2, WHITE); d.ell(5, 5, 0.8, 1.6, (40, 20, 70))
+small("familiar", 10, 10, b_fam)
+spr("n_gap", ["..vvvvv..", ".vKKKKKv.", "vKKRWRKKv", "vKKWWWKKv", "vKKRWRKKv", ".vKKKKKv.", "..vvvvv..", "........."])
 # 柔光（加法混合用）
 g = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
 for y in range(64):
@@ -584,6 +589,85 @@ def sc_rest(d):
     for x in (48, 132):
         d.rect(x, 45, x + 4.6, 57, (126, 126, 136)); d.poly([(x - 2, 45), (x + 6.6, 45), (x + 5, 40.6), (x - 0.4, 40.6)], (136, 136, 146)); d.rect(x + 1, 41.6, x + 3.6, 44, (255, 224, 126))
     put_char(d, "reimu", 70, -5, 1.6)
+def sc_gap(d):
+    grad(d, (30, 14, 48), (60, 26, 86))
+    r = random.Random(91)
+    for i in range(16):
+        x = r.uniform(4, SW - 20); y = r.uniform(4, SH - 10); w = r.uniform(10, 22)
+        d.poly([(x, y), (x + w / 2, y - w * 0.28), (x + w, y), (x + w / 2, y + w * 0.28)], (14, 6, 24))
+        d.ell(x + w / 2, y, w * 0.13, w * 0.17, (170, 40, 80))
+    for k in range(2):
+        d.line([(60 + k * 4, 0), (66 + k * 4, SH)], (230, 120, 200), 0.6)
+    put_char(d, "ran", 112, -12, 1.75)
+def sc_clue(d):
+    grad(d, (14, 36, 32), (40, 86, 70))
+    r = random.Random(52)
+    for i in range(16):
+        x = r.uniform(0, SW - 6); w = r.uniform(2.5, 5)
+        d.rect(x, 0, x + w, SH, r.choice([(34, 78, 54), (28, 64, 48), (44, 96, 62)]))
+    d.rect(0, 54, SW, SH, (30, 60, 46))
+    shi = Image.open(os.path.join(OUT, "shiki.png"))
+    d.paste(shi.resize((shi.width * 2, shi.height * 2), Image.NEAREST), 84, 12)
+scene("ev_gap", sc_gap); scene("ev_clue", sc_clue)
+def sc_gap(d):
+    grad(d, (20, 8, 36), (60, 24, 84))
+    r = random.Random(71)
+    d.poly([(30, 32), (92, 10), (154, 32), (92, 54)], (10, 4, 18))
+    d.poly([(30, 32), (92, 14), (154, 32), (92, 50)], (36, 10, 50))
+    for i in range(9):
+        x = r.uniform(48, 136); y = r.uniform(22, 42); w = r.uniform(7, 13)
+        d.poly([(x - w, y), (x, y - w * 0.4), (x + w, y), (x, y + w * 0.4)], (240, 236, 220))
+        d.ell(x, y, w * 0.3, w * 0.36, (200, 40, 60)); d.ell(x, y, w * 0.1, w * 0.3, (30, 10, 20))
+    for sx in (30, 154):
+        d.poly([(sx - 5, 26), (sx + 5, 26), (sx + 3, 32), (sx + 5, 38), (sx - 5, 38), (sx - 3, 32)], (220, 60, 80))
+def sc_clue(d):
+    grad(d, (12, 34, 30), (40, 84, 60))
+    r = random.Random(72)
+    for i in range(16):
+        x = r.uniform(0, SW); w = r.uniform(3, 6); c = r.choice([(34, 78, 54), (28, 64, 48), (44, 96, 62)])
+        d.rect(x, 0, x + w, SH, c)
+        for yy in range(int(r.uniform(0, 16)), SH, 16):
+            d.rect(x - 0.5, yy, x + w + 0.5, yy + 1, dark(c, 0.6))
+    d.ell(92, 32, 22, 22, (70, 120, 90))
+    d.ell(92, 20, 5, 5, WHITE); d.poly([(80, 26), (104, 26), (102, 32), (97, 31), (99, 48), (85, 48), (87, 31), (82, 32)], WHITE)
+    d.line([(92, 29), (92, 42)], RED, 1); d.line([(87, 35), (97, 35)], RED, 1)
+def sc_road(d):
+    grad(d, (16, 14, 44), (60, 44, 90)); stars(d, 60, 36, 81); moon(d, 26, 13, 6)
+    hills(d, 44, 4, (26, 30, 54), 82); trees(d, 51, 12, (20, 40, 44), 83)
+    d.rect(0, 52, SW, SH, (50, 46, 52)); d.poly([(60, 52), (124, 52), (150, SH), (34, SH)], (96, 86, 80))
+    d.rect(120, 22, 170, 25, (120, 50, 50)); d.rect(123, 25, 125, 54, (90, 66, 50)); d.rect(165, 25, 167, 54, (90, 66, 50))
+    d.rect(122, 40, 168, 54, (130, 96, 66)); d.rect(122, 40, 168, 42, (160, 120, 84))
+    for x in (130, 145, 160):
+        d.ell(x, 30, 3.4, 4.4, (250, 120, 70)); d.ell(x, 30, 1.6, 2.4, (255, 220, 140))
+def sc_library(d):
+    grad(d, (40, 26, 44), (70, 46, 60))
+    r = random.Random(91)
+    for sy in (14, 30, 46):
+        d.rect(0, sy, SW, sy + 1.6, (110, 76, 56))
+        x = 2
+        while x < SW - 4:
+            w = r.uniform(3, 6); h = r.uniform(8, 13)
+            d.rect(x, sy - h, x + w, sy, r.choice([(120, 60, 70), (70, 90, 140), (150, 130, 80), (80, 120, 90), (120, 90, 150)]))
+            x += w + 0.6
+    d.rect(0, 50, SW, SH, (70, 44, 40))
+    d.rect(70, 44, 108, 52, (150, 110, 70)); d.poly([(78, 44), (100, 44), (97, 38), (81, 38)], (240, 230, 210)); d.line([(89, 38), (89, 44)], (150, 140, 120), 0.6)
+    d.ell(89, 30, 9, 9, (190, 120, 255, 70))
+    put_char(d, "patchouli", 126, -12)
+def sc_bamboo(d):
+    sc_clue.__wrapped__(d) if hasattr(sc_clue, "__wrapped__") else None
+    grad(d, (12, 34, 30), (40, 84, 60))
+    r = random.Random(73)
+    for i in range(16):
+        x = r.uniform(0, SW); w = r.uniform(3, 6); c = r.choice([(34, 78, 54), (28, 64, 48), (44, 96, 62)])
+        d.rect(x, 0, x + w, SH, c)
+        for yy in range(int(r.uniform(0, 16)), SH, 16):
+            d.rect(x - 0.5, yy, x + w + 0.5, yy + 1, dark(c, 0.6))
+    d.rect(0, 54, SW, SH, (30, 60, 44))
+    put_char(d, "rabbit", 30, -11); put_char(d, "tewi", 110, -11)
+scene("ev_gap", sc_gap); scene("ev_clue", sc_clue); scene("ev_road", sc_road); scene("ev_library", sc_library); scene("ev_bamboo", sc_bamboo)
+def b_fam(d):
+    d.ell(5, 5, 4.6, 4.6, (120, 70, 190)); d.ell(5, 5, 3.2, 3.2, (190, 140, 255)); d.ell(5, 5, 1.4, 2.4, (40, 16, 60)); d.ell(3.8, 3.6, 0.8, 0.8, WHITE)
+small("familiar", 10, 10, b_fam)
 scene("ev_shrine", sc_shrine); scene("ev_kappa", sc_kappa); scene("ev_fairies", sc_fairies)
 scene("ev_tea", sc_tea); scene("ev_kedama", sc_kedama); scene("ev_kourin", sc_kourin); scene("ev_rest", sc_rest)
 

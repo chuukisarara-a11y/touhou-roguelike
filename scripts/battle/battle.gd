@@ -41,6 +41,7 @@ var spirit := 0
 var afterglow_t := 0.0
 var counter_cd := 0.0
 var phase_clean := true
+var defeat_line := ""
 var spell_bg: SpellBg
 var timestop := 0.0      # 时间停止剩余秒数（咲夜）：期间除 Boss 外一切静止，自机不能动
 var ts_real := 0.0
@@ -56,6 +57,14 @@ func _ready() -> void:
 	field_h = G.field_h()
 	bg = Background.new(); add_child(bg); bg.setup(field_h)
 	G.spirit_lv = 0
+	G.combo = 0
+	G.after_t = 0.0
+	G.battle_t = 0.0
+	slow_budget = slow_max()
+	if G.has("bomb_start"):
+		add_bomb(0.5)
+	if kind == "boss" and G.has("phoenix"):
+		G.heal(1)
 	spell_bg = SpellBg.new(); spell_bg.battle = self; add_child(spell_bg)
 	bg.mode = Db.CHAPTERS[G.run.chapter].bg
 	enemies = EnemyLayer.new(); add_child(enemies)
@@ -121,7 +130,7 @@ func _process(real_dt: float) -> void:
 			slowmo_active = true
 			slow_budget -= real_dt
 		elif move_finger != -1:
-			slow_budget = minf(SLOW_MAX, slow_budget + real_dt * 1.5)
+			slow_budget = minf(slow_max(), slow_budget + real_dt * 1.5)
 	var dt := real_dt * (SLOW_SCALE if slowmo_active else 1.0)
 	_dim.color.a = move_toward(_dim.color.a, 0.12 if slowmo_active else 0.0, real_dt * 0.8)
 	if G.bot:
@@ -135,6 +144,9 @@ func _process(real_dt: float) -> void:
 	if combo_t <= 0.0:
 		graze_combo = 0
 	afterglow_t -= dt
+	G.after_t -= dt
+	G.battle_t += dt
+	G.combo = graze_combo
 	counter_cd -= dt
 	spell_bg.tick(dt)
 	player.tick(dt, real_dt, self)
@@ -218,7 +230,10 @@ func _tick_waves(dt: float) -> void:
 			hud.cutin("p_" + Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			Au.sfx("warn")
 		else:
-			enemies.spawn(s.kind, s.move, hp_mult)
+			var en = enemies.spawn(s.kind, s.move, hp_mult)
+			if en.mech == "shield":
+				for i in 3:
+					enemies.spawn("familiar", {"type": "orbit", "owner": en, "ang": TAU * i / 3.0, "r": 20.0}, hp_mult)
 	if pending.is_empty() and enemies.alive() == 0:
 		if wave_i + 1 < waves.size():
 			_next_wave()
@@ -227,13 +242,16 @@ func _tick_waves(dt: float) -> void:
 
 func _win() -> void:
 	state = "won"
-	end_t = 1.6
+	end_t = 1.6 if defeat_line == "" else 3.2
 	_clear_to_points()
 	items.magnet_all = true
 	player.invuln = 0.0
 	Au.sfx("win")
 	banner = "胜利"
 	banner_t = 1.6
+
+func slow_max() -> float:
+	return SLOW_MAX * (2.0 if G.has("bullet_time") else 1.0)
 
 func add_bomb(v: float) -> void:
 	G.run.bomb = minf(float(G.bomb_max()), G.run.bomb + v)
@@ -246,8 +264,18 @@ func on_graze(pos: Vector2) -> void:
 	graze_combo += 1
 	combo_t = 0.8 * (2.0 if G.has("focus") else 1.0)
 	grazes += 1
+	G.run.grazes_ch += 1
+	if G.has("graze_coin") and grazes % 15 == 0:
+		items.drop_coins(pos, 1)
+	if G.has("graze_shield") and graze_combo % 30 == 0:
+		bullets.clear_near(player.position, 55.0, fx)
+		fx.burst(player.position, Color(0.8, 1.0, 1.0), 16, 55.0)
+	if G.has("reflect"):
+		var tg = shots.nearest(pos, enemies.list)
+		var dir: Vector2 = Vector2.UP if tg == null else (tg.pos - pos).normalized()
+		shots.spawn("amulet", pos, dir * 260.0, 16.0 * G.dmg_mult(), {"homing": 10.0, "rot": true})
 	var mult := 1.0 + 0.08 * mini(graze_combo, 25)
-	add_bomb(0.02 * mult * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0))
+	add_bomb(0.02 * mult * (2.0 if G.has("razor") else 1.0) * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0))
 	Au.sfx("graze", -4.0, 0.0, 1.0 + 0.02 * mini(graze_combo, 30))
 	fx.spark(pos, Color(1, 1, 1))
 	if G.has("counter") and counter_cd <= 0.0:
@@ -276,12 +304,20 @@ func on_enemy_killed(e) -> void:
 	Au.sfx("bosskill" if e.is_boss else "kill", 0.0 if e.is_boss else -5.0)
 	fx.burst(e.pos, Color(0.6, 0.9, 1.0), 8 if not e.is_boss else 40, 18.0 if not e.is_boss else 50.0)
 	items.drop_coins(e.pos, e.coins)
-	add_bomb(0.015)
+	add_bomb(0.015 * (2.0 if G.has("burst_cd") else 1.0))
+	if e.mech == "split" and e.split_lv > 0:
+		for sg in [-1.0, 1.0]:
+			enemies.spawn("m_split", {"type": "drift", "pos": e.pos + Vector2(sg * 6.0, 0), "vel": Vector2(sg * 45.0, -30.0)}, get_meta("hp_mult"), {"split_lv": e.split_lv - 1, "scale": e.scale * 0.68, "hp_k": 0.45 if e.split_lv == 2 else 0.2})
+	elif e.mech == "bomber":
+		Pat.ring(self, e.pos, 12, 62.0, randf() * TAU, 0, 0)
+		fx.burst(e.pos, Color(1, 0.5, 0.4), 16, 34.0)
 	Weapons.on_kill(self)
 	if e.ice_mark:
 		bullets.clear_near(e.pos, 45.0, fx)
 	if e.is_boss:
 		_spell_result(e.phases[e.phase_i])
+		if Db.DEFEAT.has(e.kind):
+			defeat_line = "%s：「%s」" % [e.def.name, Db.DEFEAT[e.kind]]
 		_clear_to_points()
 		shake = 0.4
 	elif G.run.hearts < G.run.max_hearts and randf() < 0.025:
@@ -318,6 +354,13 @@ func _spell_result(ph: Dictionary) -> void:
 func player_hit() -> void:
 	if player.invuln > 0.0 or state != "play" or G.dev_god:
 		return
+	if player.guard:
+		player.guard = false
+		player.guard_cd = 12.0
+		player.invuln = 1.0
+		bullets.clear_near(player.position, 45.0, fx)
+		fx.text(player.position + Vector2(0, -16), "不动明王！", Color(0.6, 0.95, 1.0))
+		return
 	hits += 1
 	phase_clean = false
 	graze_combo = 0
@@ -326,8 +369,14 @@ func player_hit() -> void:
 	fx.burst(player.position, Color(1, 0.3, 0.4), 24, 36.0)
 	shake = 0.3
 	player.invuln = 2.0 + (1.0 if G.has("camo") else 0.0)
+	if G.has("overload"):
+		G.run.bomb = 0.0
 	if G.has("lantern"):
 		add_bomb(1.0)
+	if G.has("thorn"):
+		for en in enemies.list:
+			if not en.dead:
+				en.hurt(100.0, self)
 	if G.bot or G.dev_god:
 		return
 	if G.run.shield > 0:
@@ -369,7 +418,18 @@ func use_bomb() -> void:
 	if G.has("afterglow"):
 		afterglow_t = 4.0
 	var orbs: int = [0, 8, 14, 22][k]
-	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult()
+	G.after_t = 5.0
+	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0)
+	if G.has("bomb_shock"):
+		for en in enemies.list:
+			if not en.dead:
+				en.hurt(45.0 * k * G.dmg_mult(), self)
+	if G.has("bomb_heal") and k >= 3:
+		G.heal(1)
+		fx.text(player.position + Vector2(0, -26), "+1 心", Color(1, 0.5, 0.6))
+	if G.has("burst_free") and randf() < 0.25:
+		add_bomb(1.0)
+		fx.text(player.position + Vector2(0, -36), "二重结界！", Color(1, 0.8, 0.9))
 	for i in orbs:
 		shots.spawn("orb", player.position, Vector2.from_angle(TAU * i / orbs) * (150.0 + 20.0 * k), dmg, {"homing": 7.0, "pierce": 2 + k, "radius": 6.0 + k, "life": 3.5 + k * 0.5})
 	if k >= 3:

@@ -21,7 +21,7 @@ func _ready() -> void:
 	for c in G.roll_cards(2):
 		if c.kind == "money":
 			continue
-		var price := int((70 if c.kind == "new" else (60 if G.weapon(c.id).lv == 1 else 90)) * disc)
+		var price := int((70 if c.kind == "new" else (80 if c.kind == "mod" else (60 if G.weapon(c.id).lv == 1 else 90))) * disc)
 		y += _add(G.card_text(c), price, y, func(): G.apply_card(c), 36.0, false, G.card_icon(c))
 	var picked := []
 	for i in 2:

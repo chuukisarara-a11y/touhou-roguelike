@@ -20,6 +20,11 @@ func _ready() -> void:
 		G.run.money += bonus
 	UI.label(self, "获得 %d 钱%s" % [info.earned, ("（无伤奖励 +%d）" % bonus) if bonus > 0 else ""], y, 12, Color(0.9, 0.9, 1.0))
 	y += 18
+	if info.get("shard_miss", false):
+		UI.label(self, "（毫发无伤地战胜强敌，才能得到这里的境界碎片）", y, 12, Color(0.7, 0.6, 0.85), 8)
+		y += 28
+	if info.no_hit and G.has("heart_coin") and not info.get("skipped", false):
+		G.run.money += 15
 	if info.get("shard", false):
 		UI.label(self, "获得境界碎片（%d/3）" % G.run.shards, y, 12, Color(0.85, 0.6, 1.0))
 		y += 16
@@ -67,11 +72,11 @@ func _show_relics(y: float) -> void:
 func _show_cards(y: float) -> void:
 	_nodes.append(UI.label(self, "选择一张符札", y, 12, Color(0.85, 0.8, 1.0)))
 	y += 18
-	for c in G.roll_cards(3):
+	for c in G.roll_cards(4 if G.has("lucky") else 3):
 		var cb := func():
 			G.apply_card(c)
 			G.main.node_done()
-		var b := UI.button(self, G.card_text(c), y, cb, 36.0, true, G.card_icon(c))
+		var b := UI.button(self, G.card_text(c), y, cb, 30.0, true, G.card_icon(c))
 		_nodes.append(b)
 		_choices.append(cb)
 		y += b.size.y + 4

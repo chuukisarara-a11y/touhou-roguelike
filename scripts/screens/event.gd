@@ -10,10 +10,38 @@ var _ti := -1
 var _line: Label
 var _next_btn: Button
 
+var _id := ""
+var _free := false   # 不占用地图节点的事件（隙间）：结束后直接回地图
+
+func setup(arg: Dictionary) -> void:
+	_id = arg.get("id", "")
+	_free = arg.get("free", false)
+
+func _pick() -> Dictionary:
+	if _id == "gap":
+		return Db.GAP_EVENT
+	var run: Dictionary = G.run
+	# 第三章：还没拿到碎片时，第一个事件必定是纸人的出题
+	if _id == "clue" or (run.chapter == 3 and not run.sh[2] and not run.seen_ev.has("竹林里的纸人")):
+		run.seen_ev.append("竹林里的纸人")
+		return Db.CLUE_EVENT
+	var pool := Db.EVENTS.filter(func(e): return (not e.has("ch") or e.ch.has(run.chapter)) and not run.seen_ev.has(e.title))
+	if pool.is_empty():
+		pool = Db.EVENTS.filter(func(e): return not e.has("ch") or e.ch.has(run.chapter))
+	var e: Dictionary = pool[G.rng.randi_range(0, pool.size() - 1)]
+	run.seen_ev.append(e.title)
+	return e
+
+func _finish() -> void:
+	if _free:
+		G.main.goto("map")
+	else:
+		G.main.node_done()
+
 func _ready() -> void:
 	UI.backdrop(self)
 	UI.status(self)
-	ev = Db.EVENTS[G.rng.randi_range(0, Db.EVENTS.size() - 1)]
+	ev = _pick()
 	UI.picture(self, ev.art, 22)
 	if ev.art == "ev_kappa":
 		G.see("nitori")
@@ -84,6 +112,34 @@ func _choose(ch: Dictionary) -> void:
 				else:
 					G.add_relic(rid)
 					lines.append("获得宝具：" + G.relic_text(rid))
+			"mod":
+				var mt := G.random_mod()
+				if mt == "":
+					G.run.money += 30
+					lines.append("没有可以改造的符札，换成了 30 钱")
+				else:
+					lines.append(mt)
+			"weapon":
+				var cs := G.roll_cards(40).filter(func(x): return x.kind == "new")
+				if cs.is_empty():
+					G.run.money += 40
+					lines.append("符札栏已满，换成了 40 钱")
+				else:
+					var cw: Dictionary = cs[G.rng.randi_range(0, cs.size() - 1)]
+					G.apply_card(cw)
+					lines.append("获得新符札：" + Db.WEAPONS[cw.id].name)
+			"power":
+				G.run.power += 1
+				lines.append("伤害永久 +10%")
+			"shield":
+				G.run.shield += op[1]
+				lines.append("获得 %d 层护身结界" % op[1])
+			"doll":
+				G.run.dolls += 1
+				lines.append("获得 1 个替身人偶")
+			"shard":
+				if G.give_shard(G.run.chapter):
+					lines.append("获得境界碎片（%d/3）" % G.run.shards)
 			"upgrade":
 				var ups := G.upgradable()
 				if ups.is_empty():
@@ -94,20 +150,20 @@ func _choose(ch: Dictionary) -> void:
 					w.lv += 1
 					lines.append("%s 强化到了 Lv%d" % [Db.WEAPONS[w.id].name, w.lv])
 	if lines.is_empty():
-		lines.append("什么也没有发生。")
+		lines.append("什么也没有得到。" if ch.has("alt") else "……")
 	_line.text = ch.get("say", "")
 	for b in _buttons:
 		b.queue_free()
 	_buttons.clear()
 	var l := UI.label(self, "\n".join(lines), _res_y, 12, Color(1, 0.95, 0.7), 10)
-	UI.button(self, "继续", _res_y + 10 + l.size.y, func(): G.main.node_done(), 26.0)
+	UI.button(self, "继续", _res_y + 10 + l.size.y, _finish, 26.0)
 
 func bot_step() -> void:
 	if _next_btn != null:
 		_next_line()
 		return
 	if _done:
-		G.main.node_done()
+		_finish()
 		return
 	var ok: Array = ev.choices.filter(func(c): return not c.has("cost") or G.run.money >= c.cost)
 	_choose(ok[G.rng.randi_range(0, ok.size() - 1)])

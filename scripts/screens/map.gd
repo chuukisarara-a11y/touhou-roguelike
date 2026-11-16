@@ -9,8 +9,15 @@ const COLOR := {
 const NAME := {"battle": "战斗", "elite": "精英", "event": "事件", "shop": "商店", "rest": "神社", "boss": "Boss"}
 
 var h := 356.0
+const GAP_NEED := 120
+const GAP_POS := Vector2(22, 46)
+
+## 第二章：擦弹够多时，地图上会出现隙间
+func gap_open() -> bool:
+	return G.run.chapter == 2 and not G.run.sh[1] and G.run.grazes_ch >= GAP_NEED
 var t := 0.0
 var _info: Label
+var _bottom := 999.0
 
 func _ready() -> void:
 	h = G.field_h()
@@ -20,14 +27,17 @@ func _ready() -> void:
 	_info = UI.label(self, "", h - 44, 12, Color(0.8, 0.8, 0.92), 4)
 	var ws := []
 	for w in G.run.weapons:
-		ws.append("%s%d" % [Db.WEAPONS[w.id].name, w.lv])
+		ws.append(G.weapon_label(w))
 	var rs := []
 	for r in G.run.relics:
 		rs.append(Db.RELICS[r].name)
 	_info.text = "符札：" + "、".join(ws) + ("\n宝具：" + "、".join(rs) if not rs.is_empty() else "")
 	var ex := []
 	if G.run.chapter <= 3:
-		ex.append("碎片 %d/3" % G.run.shards)
+		var hint := ""
+		if not G.run.sh[G.run.chapter - 1]:
+			hint = ["　毫发无伤地战胜强敌", "　在弹幕的缝隙间游走（擦弹 %d/%d）" % [mini(G.run.grazes_ch, GAP_NEED), GAP_NEED], "　竹林里有谁留下了问题"][G.run.chapter - 1]
+		ex.append("碎片 %d/3%s" % [G.run.shards, hint])
 	if G.run.dolls > 0:
 		ex.append("替身人偶×%d" % G.run.dolls)
 	if G.run.shield > 0:
@@ -37,8 +47,10 @@ func _ready() -> void:
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_info.size.y = UI.text_h(_info.text, G.FIELD_W - 8.0)
 	_info.position.y = h - 4 - _info.size.y
+	_bottom = _info.position.y - 16.0
 	if G.meta.dev:
 		Dev.map_tools(self, _info.position.y - 22)
+		_bottom -= 22.0
 
 func _menu() -> void:
 	var ov := UI.Overlay.new("菜单", 128.0)
@@ -52,7 +64,7 @@ func on_back() -> void:
 
 func node_pos(n: Dictionary) -> Vector2:
 	var top := 34.0
-	var bottom := h - 74.0
+	var bottom := minf(h - 74.0, _bottom)
 	var step := (bottom - top) / 7.0
 	if n.type == "boss":
 		return Vector2(G.FIELD_W / 2, top)
@@ -80,6 +92,10 @@ func _unhandled_input(ev: InputEvent) -> void:
 		if Rect2(G.FIELD_W - 26, 0, 26, 24).has_point(ev.position):
 			_menu()
 			return
+		if gap_open() and ev.position.distance_to(GAP_POS) < 20.0:
+			Au.sfx("phase")
+			G.main.goto("event", {"id": "gap", "free": true})
+			return
 		for i in reachable():
 			if node_pos(G.run.map[i]).distance_to(ev.position) < 17.0:
 				Au.sfx("select")
@@ -90,6 +106,12 @@ func _draw() -> void:
 	draw_rect(Rect2(G.FIELD_W - 19, 3, 16, 14), Color(0, 0, 0, 0.35))
 	for i in 3:
 		draw_rect(Rect2(G.FIELD_W - 16, 6 + i * 3, 10, 2), Color(1, 1, 1, 0.85))
+	if gap_open():
+		var et := G.tex("eye_big")
+		var k := 1.0 + 0.08 * sin(t * 4.0)
+		draw_circle(GAP_POS, 18.0 * k, Color(0.5, 0.2, 0.8, 0.25))
+		draw_texture_rect(et, Rect2(GAP_POS - et.get_size() * k / 2.0, et.get_size() * k), false)
+		draw_string(G.font, GAP_POS + Vector2(-12, 24), "隙间", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.85, 0.6, 1.0))
 	var m: Array = G.run.map
 	var reach := reachable()
 	for i in m.size():
@@ -114,6 +136,9 @@ func _draw() -> void:
 		draw_texture(it, (p - it.get_size() / 2.0).round(), Color.WHITE if not passed else Color(0.55, 0.55, 0.6))
 
 func bot_step() -> void:
+	if gap_open():
+		G.main.goto("event", {"id": "gap", "free": true})
+		return
 	var r := reachable()
 	var pick: int = r[G.rng.randi_range(0, r.size() - 1)]
 	for i in r:

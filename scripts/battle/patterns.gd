@@ -37,6 +37,13 @@ static func enemy_attack(e, b) -> void:
 		"burst3":
 			for sp in [66.0, 80.0, 94.0]:
 				aimed(b, e.pos, 1, 0, sp, 2, 1)
+		"mine":   # 撒下会停住的滞留弹
+			for i in 3:
+				var bl = b.bullets.add(e.pos, Vector2.from_angle(randf() * TAU) * randf_range(22, 40), 1, 4)
+				bl.drag = 1.6
+				bl.life = 6.0
+		"snipe":  # 先显示瞄准线，再射出细激光
+			b.bullets.laser(e.pos, (b.player.position - e.pos).angle(), 420.0, 3.5, 0.9, 0.25, 0, 0.0, e)
 		"ring8":
 			ring(b, e.pos, 8, 58.0, randf() * TAU, 0, 4)
 		"spiral":

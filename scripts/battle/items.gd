@@ -28,7 +28,7 @@ func tick(dt: float, battle) -> void:
 			it[0] = it[0].move_toward(pp, (260.0 + it[3] * 300.0) * dt)
 			if d < 7.0:
 				it[2] = "got_point"
-		elif magnet_all or d < 34.0:
+		elif magnet_all or d < (85.0 if G.has("magnet") else 34.0):
 			it[0] = it[0].move_toward(pp, 260.0 * dt)
 			if d < 7.0:
 				it[2] = "got_" + it[2]
@@ -39,7 +39,7 @@ func tick(dt: float, battle) -> void:
 			if it[0].y > h + 8:
 				it[2] = "lost"
 		if it[2] == "got_coin":
-			var v := 2 if (G.has("saisen") and randf() < 0.25) else 1
+			var v := (2 if (G.has("saisen") and randf() < 0.25) else 1) * (2 if G.has("greed") else 1)
 			G.run.money += v
 			Au.sfx("coin", -4.0)
 			battle.earned += v

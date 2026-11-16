@@ -33,8 +33,9 @@ func _ready() -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
 	goto("title")
-	if OS.get_cmdline_user_args().has("--uitest") or OS.get_cmdline_user_args().has("--scrolltest") or OS.get_cmdline_user_args().has("--spelltest"):
-		add_child(load("res://tools/" + (("_scrolltest.gd" if OS.get_cmdline_user_args().has("--scrolltest") else "_spelltest.gd") if not OS.get_cmdline_user_args().has("--uitest") else "uitest.gd") + "").new())
+	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest"]:   # 开发用的自动测试脚本
+		if OS.get_cmdline_user_args().has("--" + tn.trim_prefix("_")):
+			add_child(load("res://tools/%s.gd" % tn).new())
 
 func goto(name: String, arg := {}) -> void:
 	if screen != null:
@@ -92,7 +93,7 @@ func dev_start_chapter(n: int) -> void:
 	G.run.money = 150 * n
 	for i in range(1, n):
 		G.next_chapter()
-		G.run.shards = mini(3, n - 1)
+		G.give_shard(i)
 	goto("map")
 
 ## 开发者：直接打某个 Boss / 精英
@@ -105,7 +106,7 @@ func dev_fight(boss_id: String) -> void:
 	G.run.floor = 8
 	G.run.pos = G.run.map.size() - 1
 	if Db.TALKS.has(boss_id):
-		goto("talk", {"boss": boss_id})
+		goto("talk", {"boss": boss_id, "kind": "boss" if Db.CHAPTERS[ch].boss == boss_id else "elite"})
 	else:
 		goto("battle", {"kind": "elite", "boss": boss_id})
 
@@ -114,6 +115,8 @@ func enter_node(i: int) -> void:
 	run.pos = i
 	var node: Dictionary = run.map[i]
 	run.floor = node.f + 1
+	if G.has("interest"):
+		run.money += mini(15, (run.money / 50) * 3)
 	match node.type:
 		"battle", "elite", "boss":
 			if node.type == "battle" and run.chapter_first and G.has("bouyu"):
@@ -123,6 +126,9 @@ func enter_node(i: int) -> void:
 			elif node.type == "boss":
 				goto("talk", {"boss": Db.CHAPTERS[run.chapter].boss})
 				return
+			elif node.type == "elite":
+				var el: Array = Db.CHAPTERS[run.chapter].elites
+				goto("talk", {"boss": el[G.rng.randi_range(0, el.size() - 1)], "kind": "elite"})
 			else:
 				goto("battle", {"kind": node.type})
 		_:
@@ -131,10 +137,16 @@ func enter_node(i: int) -> void:
 func battle_done(info: Dictionary) -> void:
 	var run: Dictionary = G.run
 	run.battles += 1
-	if info.kind == "elite" and run.chapter <= 3 and run.shard_ch < run.chapter:
-		run.shard_ch = run.chapter
-		run.shards += 1
-		info["shard"] = true
+	# 第一章的境界碎片：无伤击破精英
+	if info.kind == "elite":
+		if run.chapter == 1 and not run.sh[0]:
+			if info.no_hit and G.give_shard(1):
+				info["shard"] = true
+			else:
+				info["shard_miss"] = true
+		if G.has("elite_hunter"):
+			run.money += 40
+			info.earned += 40
 	run.chapter_first = false
 	if G.has("onigiri"):
 		run.onigiri += 1

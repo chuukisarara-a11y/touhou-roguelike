@@ -83,9 +83,14 @@ func _draw() -> void:
 			draw_rect(Rect2(4, 33, 40, 2), Color(0, 0, 0, 0.5))
 			draw_rect(Rect2(4, 33, 40.0 * (battle.spirit % 40) / 40.0, 2), Color(0.6, 0.95, 1.0))
 	if battle.slowmo_active:
-		var sw: float = 60.0 * battle.slow_budget / battle.SLOW_MAX
+		var sw: float = 60.0 * battle.slow_budget / battle.slow_max()
 		draw_rect(Rect2(G.FIELD_W / 2 - 30, battle.field_h - 10, 60, 2), Color(0, 0, 0, 0.5))
 		draw_rect(Rect2(G.FIELD_W / 2 - 30, battle.field_h - 10, sw, 2), Color(0.6, 0.9, 1.0))
+	if battle.defeat_line != "" and battle.state == "won":
+		var by2: float = battle.field_h - 96.0
+		draw_rect(Rect2(4, by2, G.FIELD_W - 8, 44), Color(0.07, 0.05, 0.16, 0.9))
+		draw_rect(Rect2(4, by2, G.FIELD_W - 8, 1), Color(0.62, 0.55, 0.85))
+		draw_multiline_string(f, Vector2(10, by2 + 14), battle.defeat_line, HORIZONTAL_ALIGNMENT_LEFT, G.FIELD_W - 20, 12, 3, Color(0.95, 0.95, 1.0), TextServer.BREAK_GRAPHEME_BOUND)
 	if battle.banner_t > 0.0:
 		var c := Color(1, 1, 1, minf(1.0, battle.banner_t))
 		draw_string(f, Vector2(0, battle.field_h * 0.4), battle.banner, HORIZONTAL_ALIGNMENT_CENTER, G.FIELD_W, 24, c)

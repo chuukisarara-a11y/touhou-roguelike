@@ -18,6 +18,9 @@ class Shot:
 	var ice_mark := false
 	var charge := 0.0   # 命中时符卡槽充能
 	var rot := false
+	var split_mod := false
+	var child := false
+	var big := false
 	var dead := false
 	var age := 0.0
 	var life := 3.0
@@ -30,12 +33,32 @@ var gaps := []    # 隙间：[pos, life]
 func _ready() -> void:
 	modulate = Color(1, 1, 1, 0.82)   # 自机弹略透明，不遮挡敌弹
 var _new := []
+var ctx := []     # 正在开火的符札的改造（Weapons.fire 设置）
 
 func spawn(kind: String, pos: Vector2, vel: Vector2, dmg: float, opts := {}) -> Shot:
 	var s := Shot.new()
 	s.kind = kind; s.pos = pos; s.vel = vel; s.dmg = dmg
 	for k in opts:
 		s.set(k, opts[k])
+	if not ctx.is_empty():
+		if ctx.has("pierce"):
+			s.pierce += 2
+		if ctx.has("bounce"):
+			s.bounce += 2
+		if ctx.has("split"):
+			s.split_mod = true
+		if ctx.has("burn"):
+			s.burn = maxf(s.burn, 6.0 * G.dmg_mult())
+		if ctx.has("frost"):
+			s.slow = maxf(s.slow, 1.5)
+		if ctx.has("big"):
+			s.radius *= 1.8
+			s.vel *= 0.75
+			s.big = true
+		if ctx.has("leech"):
+			s.charge += 0.003
+		if ctx.has("homing") and s.homing == 0.0:
+			s.homing = 3.5
 	_new.append(s)
 	return s
 
@@ -102,6 +125,10 @@ func tick(dt: float, battle) -> void:
 
 func _on_hit(s: Shot, e, battle) -> void:
 	battle.fx.spark(s.pos)
+	if s.split_mod and not s.child:
+		for sg in [-1.0, 1.0]:
+			var c := spawn(s.kind, s.pos, s.vel.rotated(sg * 0.7), s.dmg * 0.4, {"child": true, "rot": s.rot, "life": 1.2, "radius": s.radius, "homing": s.homing})
+			c.hit_ids[e.id] = true
 	var steam := false
 	if s.burn > 0.0:
 		steam = e.slow_t > 0.0
@@ -154,9 +181,6 @@ func _draw() -> void:
 	for s in list:
 		var t: Texture2D = G.tex(s.kind)
 		var sz := t.get_size()
-		if s.rot:
-			draw_set_transform(s.pos, s.vel.angle() + PI / 2.0, Vector2.ONE)
-			draw_texture(t, -sz / 2.0)
-			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		else:
-			draw_texture(t, (s.pos - sz / 2.0))
+		draw_set_transform(s.pos, (s.vel.angle() + PI / 2.0) if s.rot else 0.0, Vector2(1.7, 1.7) if s.big else Vector2.ONE)
+		draw_texture(t, -sz / 2.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

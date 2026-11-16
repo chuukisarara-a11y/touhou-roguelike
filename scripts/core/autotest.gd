@@ -28,7 +28,7 @@ func _process(dt: float) -> void:
 	var m = get_parent()
 	if m.screen_name != last_screen:
 		last_screen = m.screen_name
-		snap_in = 0.5 if m.screen_name != "battle" else 3.0
+		snap_in = 0.5 if m.screen_name != "battle" else 6.5
 	if snap_in > 0.0:
 		snap_in -= real
 		if snap_in <= 0.0 and shot_n < 90:

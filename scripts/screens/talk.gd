@@ -2,6 +2,7 @@ extends Node2D
 ## Boss 战前对话：左右立绘 + 对话框，点击推进，最后有一个带小奖励的选项。
 
 var boss_id := ""
+var kind := "boss"
 var lines := []
 var choices := []
 var idx := -1
@@ -17,6 +18,7 @@ var h := 356.0
 
 func setup(arg: Dictionary) -> void:
 	boss_id = arg.boss
+	kind = arg.get("kind", "boss")
 	var d: Dictionary = Db.TALKS[boss_id]
 	lines = d.lines
 	choices = d.choices
@@ -69,7 +71,7 @@ func _say(who: String, text: String) -> void:
 
 func _advance() -> void:
 	if _chosen:
-		G.main.goto("battle", {"kind": "boss"})
+		G.main.goto("battle", {"kind": kind, "boss": boss_id})
 		return
 	if not _buttons.is_empty():
 		return

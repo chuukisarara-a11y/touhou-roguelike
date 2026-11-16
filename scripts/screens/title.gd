@@ -28,7 +28,7 @@ func _ready() -> void:
 	for it in items:
 		UI.button(self, it[0], y, it[1], 24.0)
 		y += 27
-	UI.label(self, "东方Project 同人作品　v0.9 开发版", h - 16, 12, Color(0.55, 0.53, 0.7))
+	UI.label(self, "东方Project 同人作品　v0.10 开发版", h - 16, 12, Color(0.55, 0.53, 0.7))
 
 func _new_game() -> void:
 	if G.has_save():

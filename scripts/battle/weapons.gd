@@ -2,8 +2,22 @@ class_name Weapons
 ## 符札（武器）的发射逻辑。fire() 发射一次并返回冷却时间（秒）。
 
 static func fire(w: Dictionary, p: Player, b) -> float:
+	var mods: Array = w.get("mods", [])
+	b.shots.ctx = mods
+	var cd := _fire(w, p, b)
+	b.shots.ctx = []
+	if mods.has("rapid"):
+		cd /= 1.35
+	if mods.has("heavy"):
+		cd *= 1.25
+	if G.has("sniper"):
+		cd *= 2.0
+	return cd
+
+static func _fire(w: Dictionary, p: Player, b) -> float:
 	var s: ShotLayer = b.shots
-	var m: float = G.dmg_mult() * (1.6 if w.get("awake", false) else 1.0)
+	var mods: Array = w.get("mods", [])
+	var m: float = G.dmg_mult() * (1.6 if w.get("awake", false) else 1.0) * (0.85 if mods.has("rapid") else 1.0) * (1.45 if mods.has("heavy") else 1.0)
 	var lv: int = w.lv
 	var pos := p.position
 	var track := 1.3 if G.tag_count("追踪") >= 2 else 1.0

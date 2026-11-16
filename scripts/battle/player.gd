@@ -15,6 +15,12 @@ var orb_ang := 0.0
 var dolls := []
 var laser_w := 0.0
 var laser_t := 0.0
+var fams := []          # 使魔：[pos, eat_cd]
+var fam_cd := 0.0
+var speed_s := 99.0     # 平滑后的移动速度
+var focus_t := 0.0
+var guard := false      # 「不动明王」的护盾
+var guard_cd := 0.0
 
 var _sprite: Sprite2D
 var _hit: Sprite2D
@@ -31,7 +37,7 @@ func _ready() -> void:
 		w.cd = 0.0
 
 func graze_radius() -> float:
-	return GRAZE_RADIUS * (1.5 if G.has("gohei") else 1.0)
+	return GRAZE_RADIUS * (1.5 if G.has("gohei") else 1.0) * (2.0 if G.has("razor") else 1.0) * (1.5 if (G.has("slow_graze") and G.focus_on) else 1.0)
 
 func tick(dt: float, real_dt: float, battle) -> void:
 	_t += dt
@@ -41,10 +47,44 @@ func tick(dt: float, real_dt: float, battle) -> void:
 	var v := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	focused = Input.is_action_pressed("slow")
 	var sp := (SLOW_SPEED if focused else SPEED) * (1.15 if G.has("fan") else 1.0)
+	var before := position
 	position += v * sp * real_dt + touch_delta
 	touch_delta = Vector2.ZERO
 	position.x = clampf(position.x, 7.0, G.FIELD_W - 7.0)
 	position.y = clampf(position.y, 12.0, battle.field_h - 12.0)
+	# 专注状态：移动得很慢（或按住低速键）
+	if real_dt > 0.0:
+		speed_s = lerpf(speed_s, position.distance_to(before) / real_dt, minf(1.0, real_dt * 10.0))
+	G.focus_on = focused or speed_s < 38.0
+	focus_t = focus_t + dt if G.focus_on else 0.0
+	guard_cd -= dt
+	if G.has("slow_shield") and not guard and guard_cd <= 0.0 and focus_t >= 2.0:
+		guard = true
+		Au.sfx("heal", -4.0)
+	# 使魔
+	var nf := G.familiar_count()
+	while fams.size() < nf:
+		fams.append([position, 0.0])
+	for i in nf:
+		var fm: Array = fams[i]
+		fm[0] = position + Vector2.from_angle(-orb_ang * 0.45 + TAU * i / nf) * 30.0
+		fm[1] -= dt
+		if G.has("familiar_guard") and fm[1] <= 0.0:
+			for bl in battle.bullets.list:
+				if not bl.dead and bl.pos.distance_squared_to(fm[0]) < (bl.r + 5.0) * (bl.r + 5.0):
+					bl.dead = true
+					fm[1] = 0.8
+					battle.fx.spark(bl.pos, Color(0.7, 0.9, 1.0))
+					break
+	fam_cd -= dt
+	if nf > 0 and fam_cd <= 0.0 and battle.state == "play":
+		fam_cd = 0.5 / (2.0 if G.has("puppeteer") else 1.0)
+		for i in nf:
+			var target = battle.shots.nearest(fams[i][0], battle.enemies.list)
+			var dir := Vector2.UP
+			if target != null:
+				dir = (target.pos - fams[i][0]).normalized()
+			battle.shots.spawn("needle", fams[i][0], dir * 300.0, G.familiar_dmg(), {"rot": true})
 	# 阴阳玉
 	var yy = G.weapon("yinyang")
 	var n: int = yy.lv if yy != null else 0
@@ -67,7 +107,7 @@ func tick(dt: float, real_dt: float, battle) -> void:
 		dolls = [position + Vector2(-17, 5), position + Vector2(17, 5)]
 	# 射击
 	laser_t -= dt
-	if battle.state == "play":
+	if battle.state == "play" and not G.has("reflect"):
 		for w in G.run.weapons:
 			w.cd -= dt
 			if w.cd <= 0.0:
@@ -85,6 +125,13 @@ func _draw() -> void:
 	var yt := G.tex("yinyang")
 	for o in orbs:
 		draw_texture(yt, (o[0] - position - yt.get_size() / 2.0))
+	if G.focus_on:
+		draw_arc(Vector2.ZERO, 7.0, 0, TAU, 20, Color(1, 1, 1, 0.35), 1.0)
+	if guard:
+		draw_arc(Vector2.ZERO, 11.0, 0, TAU, 24, Color(0.5, 0.95, 1.0, 0.9), 1.5)
+	var ft := G.tex("doll")
+	for fm in fams.slice(0, G.familiar_count()):
+		draw_texture(ft, (fm[0] - position - ft.get_size() / 2.0), Color(1.0, 0.8, 1.0))
 	var dt_ := G.tex("doll")
 	for d in dolls:
 		draw_texture(dt_, (d - position - dt_.get_size() / 2.0))

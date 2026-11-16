@@ -26,6 +26,8 @@ class Bullet:
 	var emit := 0.0     # 每隔多少秒向两侧洒小弹
 	var emit_t := 0.0
 	var go_spread := 0.0
+	var drag := 0.0     # 减速（滞留弹用）
+	var life := 0.0     # 存活秒数（0 = 直到出屏）
 
 class Laser:
 	var o: Vector2
@@ -131,6 +133,11 @@ func tick(dt: float, battle) -> void:
 				b.tag = ""
 			elif b.age > 0.7:
 				b.vel = Vector2.ZERO
+		if b.life > 0.0 and b.age > b.life:
+			b.dead = true
+			continue
+		if b.drag > 0.0:
+			b.vel *= maxf(0.0, 1.0 - b.drag * dt)
 		if b.w != 0.0:
 			b.vel = b.vel.rotated(b.w * dt)
 		if b.acc != Vector2.ZERO:
@@ -166,6 +173,8 @@ func tick(dt: float, battle) -> void:
 		elif not b.grazed and d2 < (b.r + graze_r) * (b.r + graze_r):
 			b.grazed = true
 			battle.on_graze(b.pos)
+			if G.has("reflect"):
+				b.dead = true
 	list = list.filter(func(b): return not b.dead)
 	_tick_lasers(dt, battle, pp, graze_r, alive)
 	queue_redraw()
@@ -233,6 +242,8 @@ func _draw() -> void:
 			s = 1.0 + (1.0 - k) * 1.4
 			a = 0.35 + 0.65 * k
 		var rect := Rect2(-8.0 * s, -8.0 * s, 16.0 * s, 16.0 * s)
+		if b.life > 0.0 and b.life - b.age < 1.0:   # 快消失时闪烁
+			a *= 0.45 + 0.55 * absf(sin(b.age * 14.0))
 		var mod := Color(1, 1, 1, a)
 		if b.shape in ROT_SHAPES:
 			draw_set_transform(b.pos, (b.vel.angle() if b.vel != Vector2.ZERO else -PI / 2.0) + PI / 2.0, Vector2.ONE)
