@@ -5,6 +5,10 @@ var ev := {}
 var _buttons := []
 var _done := false
 var _res_y := 150.0
+var _talk := []
+var _ti := -1
+var _line: Label
+var _next_btn: Button
 
 func _ready() -> void:
 	UI.backdrop(self)
@@ -12,8 +16,26 @@ func _ready() -> void:
 	ev = Db.EVENTS[G.rng.randi_range(0, Db.EVENTS.size() - 1)]
 	UI.picture(self, ev.art, 22)
 	UI.label(self, ev.title, 90, 12, Color(0.7, 1.0, 0.75))
-	var l := UI.label(self, ev.text, 108, 12, Color(0.92, 0.92, 1.0), 10)
-	var y: float = 116 + l.size.y
+	_talk = ev.get("talk", [])
+	_line = UI.label(self, "", 108, 12, Color(0.92, 0.92, 1.0), 10)
+	_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_line.size.y = 60
+	_next_btn = UI.button(self, "▼", 172, _next_line, 22.0)
+	_next_line()
+
+func _next_line() -> void:
+	_ti += 1
+	if _ti < _talk.size():
+		var who: String = _talk[_ti][0]
+		_line.text = (_talk[_ti][1] if who == "旁白" else "%s：「%s」" % [who, _talk[_ti][1]])
+		_line.visible_ratio = 0.0
+		_line.create_tween().tween_property(_line, "visible_ratio", 1.0, 0.3)
+		return
+	_next_btn.queue_free()
+	_next_btn = null
+	_line.text = "要怎么做？"
+	_line.visible_ratio = 1.0
+	var y: float = 130.0
 	_res_y = y
 	for ch in ev.choices:
 		var b := UI.button(self, ch.text, y, func(): _choose(ch), 30.0, true)
@@ -69,6 +91,7 @@ func _choose(ch: Dictionary) -> void:
 					lines.append("%s 强化到了 Lv%d" % [Db.WEAPONS[w.id].name, w.lv])
 	if lines.is_empty():
 		lines.append("什么也没有发生。")
+	_line.text = ch.get("say", "")
 	for b in _buttons:
 		b.queue_free()
 	_buttons.clear()
@@ -76,6 +99,9 @@ func _choose(ch: Dictionary) -> void:
 	UI.button(self, "继续", _res_y + 10 + l.size.y, func(): G.main.node_done(), 26.0)
 
 func bot_step() -> void:
+	if _next_btn != null:
+		_next_line()
+		return
 	if _done:
 		G.main.node_done()
 		return

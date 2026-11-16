@@ -31,7 +31,7 @@ func _process(dt: float) -> void:
 		snap_in = 0.5 if m.screen_name != "battle" else 3.0
 	if snap_in > 0.0:
 		snap_in -= real
-		if snap_in <= 0.0 and shot_n < 40:
+		if snap_in <= 0.0 and shot_n < 90:
 			shot_n += 1
 			var img := get_viewport().get_texture().get_image()
 			if img != null:

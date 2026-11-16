@@ -34,6 +34,23 @@ static func enemy_attack(e, b) -> void:
 			aimed(b, e.pos, 3, 36, 70.0, 2, 0)
 		"ring":
 			ring(b, e.pos, 10, 55.0, randf() * TAU, 0, 3)
+		"burst3":
+			for sp in [66.0, 80.0, 94.0]:
+				aimed(b, e.pos, 1, 0, sp, 2, 1)
+		"ring8":
+			ring(b, e.pos, 8, 58.0, randf() * TAU, 0, 4)
+		"spiral":
+			for k in 3:
+				b.bullets.add(e.pos, Vector2.from_angle(e.t * 1.9 + k * TAU / 3.0) * 60.0, 0, 0)
+		"fan5":
+			aimed(b, e.pos, 5, 64, 76.0, 2, 3)
+		"cross":
+			ring(b, e.pos, 4, 66.0, e.t * 0.9, 0, 2)
+		"slowbig":
+			aimed(b, e.pos, 1, 0, 46.0, 1, 5)
+		"ringaim":
+			ring(b, e.pos, 14, 50.0, randf() * TAU, 0, 6)
+			aimed(b, e.pos, 3, 30, 84.0, 2, 1)
 
 ## Boss / 精英的符卡
 static func boss(e, id: String, dt: float, b) -> void:
@@ -65,6 +82,104 @@ static func boss(e, id: String, dt: float, b) -> void:
 				ring(b, e.pos, 18, 58.0, randf() * TAU, 0, 2)
 			if every(e, "b", 0.55, dt):
 				aimed(b, e.pos, 1, 0, 95.0, 2, 3)
+		"mei0":
+			if every(e, "a", 1.0, dt):
+				e.tm["n"] = e.tm.get("n", 0) + 1
+				ring(b, e.pos, 14, 60.0, e.tm["n"] * 0.22, 0, int(e.tm["n"]) % 6)
+			if every(e, "b", 2.6, dt):
+				aimed(b, e.pos, 3, 26, 92.0, 1, 0)
+		"mei1":  # 五瓣旋转的花
+			if every(e, "a", 0.13, dt):
+				e.tm["n"] = e.tm.get("n", 0) + 1
+				for k in 5:
+					b.bullets.add(e.pos, Vector2.from_angle(t * 1.5 + k * TAU / 5.0) * 62.0, 2, (int(e.tm["n"]) / 4 + k) % 6)
+			if every(e, "b", 2.6, dt):
+				aimed(b, e.pos, 3, 30, 90.0, 1, 3)
+		"pat0":
+			if every(e, "a", 1.4, dt):
+				aimed(b, e.pos, 7, 70, 82.0, 0, 0)
+			if every(e, "b", 2.2, dt):
+				ring(b, e.pos, 12, 44.0, randf() * TAU, 1, 1)
+		"pat1":  # 火雨 + 水环
+			if every(e, "a", 0.17, dt):
+				b.bullets.add(Vector2(randf_range(6, G.FIELD_W - 6), -4), Vector2.from_angle(PI / 2.0 + randf_range(-0.25, 0.25)) * randf_range(55, 92), 2, 0)
+			if every(e, "b", 1.9, dt):
+				ring(b, e.pos, 18, 52.0, randf() * TAU, 0, 1)
+		"tewi0":
+			if every(e, "a", 0.5, dt):
+				e.tm["z"] = -e.tm.get("z", 1.0)
+				fan(b, e.pos, (b.player.position - e.pos).angle() + 0.28 * e.tm["z"], 2, 10, 88.0, 2, 2)
+			if every(e, "b", 2.6, dt):
+				ring(b, e.pos, 12, 54.0, randf() * TAU, 0, 3)
+		"tewi1":
+			if every(e, "a", 0.75, dt):
+				ring(b, e.pos, 10, 60.0, t * 1.1, 2, 3)
+			if every(e, "b", 0.28, dt):
+				aimed(b, e.pos, 1, 0, 108.0, 0, 6)
+		"rei0":
+			if every(e, "a", 1.2, dt):
+				aimed(b, e.pos, 5, 56, 88.0, 2, 0)
+			if every(e, "b", 2.3, dt):
+				ring(b, e.pos, 14, 52.0, randf() * TAU, 0, 4)
+		"rei1":  # 停顿后重新瞄准的幻觉弹
+			if every(e, "a", 1.7, dt):
+				for i in 18:
+					b.bullets.add(e.pos, Vector2.from_angle(TAU * i / 18.0 + t) * 78.0, 0, 4, "sa")
+			if every(e, "b", 0.9, dt):
+				aimed(b, e.pos, 3, 34, 92.0, 2, 0)
+		"saku1":
+			if every(e, "a", 0.62, dt):
+				e.tm["z"] = -e.tm.get("z", 1.0)
+				fan(b, e.pos, (b.player.position - e.pos).angle() + 0.1 * e.tm["z"], 7, 78, 96.0, 2, 1)
+			if every(e, "b", 2.3, dt):
+				ring(b, e.pos, 16, 54.0, randf() * TAU, 0, 6)
+		"saku2":  # The World：飞刀撒满全场 → 时间停止 → 一齐射向自机
+			var c2 := fmod(t, 5.2)
+			if c2 < 2.0:
+				e.tm["stopped"] = false
+				if every(e, "a", 0.07, dt):
+					b.bullets.add(e.pos, Vector2.from_angle(randf() * TAU) * randf_range(50, 100), 2, 6, "tw")
+			elif c2 < 3.0:
+				if not e.tm.get("stopped", false):
+					e.tm["stopped"] = true
+					Au.sfx("phase", -4.0)
+					for bl in b.bullets.list:
+						if bl.tag == "tw":
+							bl.vel = Vector2.ZERO
+							bl.col = 1
+				if every(e, "b", 0.34, dt):
+					aimed(b, e.pos, 3, 30, 100.0, 0, 0)
+			elif e.tm.get("stopped", false):
+				e.tm["stopped"] = false
+				for bl in b.bullets.list:
+					if bl.tag == "tw":
+						bl.vel = ((b.player.position - bl.pos).normalized().rotated(randf_range(-0.35, 0.35))) * randf_range(60, 84) * G.DIFF_SPEED
+						bl.tag = ""
+		"saku3":
+			if every(e, "a", 1.15, dt):
+				for i in 16:
+					b.bullets.add(e.pos, Vector2.from_angle(TAU * i / 16.0 + t * 0.5) * 84.0, 2, 1, "sa")
+			if every(e, "b", 2.4, dt):
+				aimed(b, e.pos, 5, 60, 70.0, 1, 0)
+		"kagu1":
+			if every(e, "a", 0.55, dt):
+				e.tm["n"] = e.tm.get("n", 0) + 1
+				ring(b, e.pos, 16, 60.0, t * 0.6 * (1.0 if int(e.tm["n"]) % 2 == 0 else -1.0), 0, int(e.tm["n"]) % 6)
+			if every(e, "b", 1.8, dt):
+				aimed(b, e.pos, 5, 40, 104.0, 2, 6)
+		"kagu2":
+			if every(e, "a", 0.1, dt):
+				b.bullets.add(e.pos, Vector2.from_angle(t * 2.6) * 68.0, 2, 0)
+				b.bullets.add(e.pos, Vector2.from_angle(-t * 2.6 + PI) * 68.0, 2, 3)
+			if every(e, "b", 2.1, dt):
+				ring(b, e.pos, 10, 40.0, randf() * TAU, 1, 0)
+		"kagu3":  # 七色玉枝：七个发射点左右摆动
+			if every(e, "a", 0.24, dt):
+				for i in 7:
+					var px: float = 20.0 + i * (G.FIELD_W - 40.0) / 6.0
+					b.bullets.add(Vector2(px, e.pos.y - 6), Vector2.from_angle(PI / 2.0 + sin(t * 1.4 + i * 0.9) * 0.55) * 64.0, 0, i % 7)
+			if every(e, "b", 2.7, dt):
+				aimed(b, e.pos, 7, 70, 80.0, 2, 4)
 		"cirno1":  # 冰瀑：左右两侧扫动的冰柱 + 自机狙
 			if every(e, "a", 0.3, dt):
 				var sw := 0.55 + 0.45 * sin(t * 1.3)

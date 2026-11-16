@@ -70,7 +70,7 @@ BANGS = {
 }
 
 def draw_char(sp, k, frame=0):
-    d = Dr(48, 68, k, oy=5)
+    d = Dr(48, 76, k, oy=13)
     H = sp["hair"]; Hd = dark(H, 0.74); Hl = light(H, 0.4)
     dress = sp["dress"]; top = sp.get("top", dress); slv = sp.get("sleeve", top)
     trim = sp.get("trim", WHITE); eye = sp["eye"]; shoe = sp.get("shoe", (120, 56, 60))
@@ -79,6 +79,8 @@ def draw_char(sp, k, frame=0):
     style = sp.get("style", "short")
     if style == "long":
         d.poly([(9, 20), (39, 20), (42.5, 45), (36, 49), (12, 49), (5.5, 45)], Hd)
+    elif style == "verylong":
+        d.poly([(9, 20), (39, 20), (44, 54), (37, 59), (11, 59), (4, 54)], Hd)
     elif style == "bob":
         d.ell(24, 25, 17, 13.5, Hd)
     if not sp.get("robe"):
@@ -136,6 +138,41 @@ def draw_char(sp, k, frame=0):
         fn(d, frame)
     return outlined(d.im, max(1, int(round(k * 0.55))))
 
+def f_apron(d, fr):
+    d.poly([(19.5, 42), (28.5, 42), (31, 54), (17, 54)], WHITE)
+    d.line([(17.6, 52.6), (30.4, 52.6)], (214, 214, 230), 0.5)
+def f_band(d, fr):
+    d.poly([(12.5, 9.5), (35.5, 9.5), (33.5, 5.6), (14.5, 5.6)], WHITE)
+    for x in (16, 20, 24, 28, 32):
+        d.ell(x, 5.6, 2, 1.6, WHITE)
+def f_ears(tall=1.0, c=WHITE):
+    def f(d, fr):
+        for m in (1, -1):
+            d.ell(mx(17.5, m), 2 - 5 * tall, 2.9, 8.5 * tall, c)
+            d.ell(mx(17.5, m), 2 - 5 * tall, 1.2, 6.2 * tall, (255, 186, 196))
+    return f
+def f_beret(c):
+    def f(d, fr):
+        d.ell(24, 6.4, 14, 5.6, c); d.ell(27, 7.4, 9, 3.4, dark(c, 0.84))
+        d.ell(24, 6, 2.3, 2.3, YEL)
+    return f
+def f_mobcap(c):
+    def f(d, fr):
+        d.ell(24, 5.2, 14.5, 7.2, c); d.poly([(9.8, 8.6), (38.2, 8.6), (38.2, 11.2), (9.8, 11.2)], dark(c, 0.86))
+        d.ell(24, 4.4, 2.4, 2.4, YEL); d.ell(25, 3.8, 1.9, 1.9, c)
+    return f
+def f_braids(H, ribbon):
+    def f(d, fr):
+        for m in (1, -1):
+            d.poly(mir([(9, 24), (12.6, 24), (12.2, 37), (9.6, 37)], m), H)
+            d.ell(mx(10.9, m), 30.5, 2, 1.6, ribbon)
+    return f
+def f_hime(H):
+    def f(d, fr):
+        d.poly([(11.6, 13), (36.4, 13), (36.4, 21.4), (11.6, 21.4)], H)
+        for m in (1, -1):
+            d.poly(mir([(8.6, 17), (13.6, 17), (13.6, 33), (9.2, 33)], m), H)
+    return f
 def f_bow(c, y=0):
     def f(d, fr):
         for m in (1, -1):
@@ -216,12 +253,21 @@ SPECS = {
     "cirno": dict(hair=(132, 200, 252), dress=BLUE, sleeve=WHITE, eye=(70, 120, 226), back=[f_ice, f_bow((60, 110, 206), 1)], mid=[f_collar(RED)], shoe=(70, 90, 170), style="bob", bangs=2),
     "nitori": dict(hair=(100, 168, 234), dress=(100, 178, 226), eye=(70, 120, 206), back=[f_twin((100, 168, 234))], mid=[f_collar(WHITE), f_dot(24, 41, 1.7, YEL)], front=[f_cap((100, 178, 120))], shoe=(70, 100, 130)),
     "rinnosuke": dict(hair=(220, 220, 230), dress=(70, 90, 160), top=(50, 60, 84), robe=True, eye=(200, 170, 80), front=[f_glasses], shoe=(60, 50, 50), bangs=2),
+    "maid": dict(hair=(156, 116, 86), dress=(66, 78, 140), eye=(120, 90, 70), back=[f_wings((214, 228, 255))], mid=[f_collar(RED), f_apron], front=[f_band], style="bob"),
+    "bamboo": dict(hair=(70, 160, 100), dress=(130, 196, 120), eye=(50, 120, 70), back=[f_wings((224, 250, 214))], mid=[f_collar(WHITE)], style="bob", bangs=3),
+    "rabbit": dict(hair=(206, 186, 226), dress=(246, 170, 190), eye=(220, 60, 70), back=[f_ears(0.9)], mid=[f_collar(WHITE)], style="bob", bangs=2),
+    "tewi": dict(hair=(70, 60, 72), dress=(250, 186, 200), eye=(210, 70, 80), back=[f_ears(0.8)], mid=[f_dot(24, 40, 2, (250, 150, 60))], style="bob", bangs=3),
+    "reisen": dict(hair=(196, 160, 226), dress=(244, 160, 180), top=(58, 58, 80), eye=(226, 56, 66), back=[f_ears(1.25)], mid=[f_collar(RED)], style="long"),
+    "meiling": dict(hair=(232, 88, 78), dress=(100, 176, 120), eye=(90, 150, 206), mid=[f_collar(WHITE)], front=[f_beret((100, 176, 120)), f_braids((232, 88, 78), (40, 40, 50))], style="long", bangs=2, shoe=(50, 50, 60)),
+    "patchouli": dict(hair=(166, 108, 196), dress=(236, 200, 236), robe=True, eye=(130, 80, 170), mid=[f_collar((170, 90, 200))], front=[f_mobcap((244, 226, 244))], style="long", bangs=2, shoe=(150, 100, 170)),
+    "sakuya": dict(hair=(218, 224, 238), dress=(66, 86, 166), eye=(100, 120, 206), mid=[f_collar((60, 150, 90)), f_apron], front=[f_band, f_braids((218, 224, 238), (60, 160, 96))], style="bob", bangs=3, shoe=(50, 50, 70)),
+    "kaguya": dict(hair=(46, 40, 56), dress=(156, 46, 66), top=(248, 176, 196), robe=True, eye=(130, 76, 66), mid=[f_collar(WHITE)], front=[f_hime((46, 40, 56))], style="verylong", shoe=(120, 40, 50)),
     "sunny": dict(hair=(252, 198, 104), dress=RED, eye=(70, 130, 206), back=[f_wings((255, 242, 206)), f_twin((252, 198, 104))], mid=[f_collar(WHITE)]),
     "luna": dict(hair=(252, 238, 160), dress=WHITE, trim=(200, 200, 220), eye=(200, 70, 70), back=[f_wings((232, 232, 255))], mid=[f_collar((60, 54, 70))], front=[f_bow((60, 54, 70))], style="long", bangs=2),
     "starf": dict(hair=(70, 60, 92), dress=BLUE, eye=(130, 96, 70), back=[f_wings((214, 228, 255))], mid=[f_collar(WHITE)], front=[f_bow(BLUE)], style="long", bangs=3),
 }
-ANIM = {"fairy", "fairy_red", "bigfairy", "daiyousei", "cirno"}
-PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke"]
+ANIM = {"fairy", "fairy_red", "bigfairy", "daiyousei", "cirno", "maid", "bamboo"}
+PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke", "meiling", "patchouli", "tewi", "reisen", "sakuya", "kaguya"]
 
 def char_img(name, k, frame=0):
     return draw_char(SPECS[name], k, frame)
@@ -231,12 +277,12 @@ for name in SPECS:
         continue
     if name in ANIM:
         for f in range(2):
-            char_img(name, S, f).save(os.path.join(OUT, "%s_%d.png" % (name, f)))
+            char_img(name, S, f).save(os.path.join(OUT, "c_%s_%d.png" % (name, f)))
     else:
-        char_img(name, S).save(os.path.join(OUT, name + ".png"))
+        char_img(name, S).save(os.path.join(OUT, "c_" + name + ".png"))
 for name in PORTRAITS:   # 立绘：4 倍放大的半身像
     im = char_img(name, 4)
-    im.crop((0, 0, 192, 208)).save(os.path.join(OUT, "p_%s.png" % name))
+    im.crop((0, 0, 192, 240)).save(os.path.join(OUT, "p_%s.png" % name))
 
 # 毛玉（两帧）
 def kedama(k, f):
@@ -251,6 +297,32 @@ def kedama(k, f):
     return outlined(d.im, 1)
 for f in range(2):
     kedama(S, f).save(os.path.join(OUT, "kedama_%d.png" % f))
+
+# 蝙蝠 / 魔导书 / 幽灵
+def bat(k, f):
+    d = Dr(22, 14, k)
+    c = (96, 60, 126)
+    for m in (1, -1):
+        pts = [(9.6, 5.6), (1, 1.5 + f * 4), (2.4, 8), (5.2, 6.6), (6.6, 10.4), (9.8, 9)]
+        d.poly(pts if m == 1 else [(22 - x, y) for x, y in pts], c)
+    d.ell(11, 7.2, 3, 3.8, dark(c, 0.8)); d.poly([(8.6, 4.4), (9.6, 1.6), (10.6, 4.4)], dark(c, 0.8)); d.poly([(11.4, 4.4), (12.4, 1.6), (13.4, 4.4)], dark(c, 0.8))
+    d.ell(9.8, 6.6, 0.7, 0.7, RED); d.ell(12.2, 6.6, 0.7, 0.7, RED)
+    return outlined(d.im, 1)
+for f in range(2):
+    bat(S, f).save(os.path.join(OUT, "bat_%d.png" % f))
+d = Dr(15, 18, S)
+d.rect(1, 1, 14, 17, (176, 56, 70)); d.rect(1, 1, 3.4, 17, (120, 36, 56)); d.rect(12.6, 2, 14, 16, WHITE)
+d.line([(4.6, 2.6), (11.6, 2.6), (11.6, 15.4), (4.6, 15.4), (4.6, 2.6)], YEL, 0.5)
+d.ell(8.1, 9, 2.6, 2.6, YEL); d.ell(8.1, 9, 1.4, 1.4, (176, 56, 70))
+outlined(d.im, 1).save(os.path.join(OUT, "book.png"))
+def ghost(k):
+    d = Dr(18, 22, k)
+    c = (226, 240, 255, 240)
+    d.ell(9, 8, 7.4, 7.4, c); d.poly([(2.4, 10), (15.6, 10), (13, 16.5), (10.6, 21), (8.4, 16), (5.4, 19)], c)
+    d.ell(11, 10, 4.5, 4, (196, 216, 246, 240))
+    d.ell(6.4, 7.4, 1, 1.9, K); d.ell(11.6, 7.4, 1, 1.9, K); d.ell(9, 11, 1.2, 0.9, (150, 170, 210))
+    return outlined(d.im, 1)
+ghost(S).save(os.path.join(OUT, "ghost.png")); ghost(S * 1.6).save(os.path.join(OUT, "ghost_big.png"))
 
 # ------------------------------------------------------------------ 字符画小图（自机弹、图标），按密度放大
 P = {"R": RED, "r": (150, 30, 48), "W": WHITE, "w": (200, 204, 220), "Y": YEL, "B": BLUE, "b": (40, 80, 170),
@@ -403,12 +475,12 @@ def sc_kappa(d):
     for i in range(7):
         x = 34 + i * 11; c = r.choice([(156, 156, 170), (116, 126, 146), (186, 166, 96)])
         d.rect(x, 32, x + 7, 40, c); d.ell(x + 2.4, 35, 1, 1, r.choice([(250, 80, 80), (90, 250, 120), YEL])); d.rect(x + 4, 36.5, x + 6, 38.5, (46, 46, 56))
-    put_char(d, "nitori", 120, -4)
+    put_char(d, "nitori", 120, -11)
 def sc_fairies(d):
     grad(d, (24, 56, 66), (96, 156, 116)); trees(d, 53, 28, (28, 74, 60), 11); trees(d, 59, 14, (22, 54, 48), 12)
     d.rect(0, 57, SW, SH, (44, 86, 60))
     for i, n in enumerate(("sunny", "luna", "starf")):
-        put_char(d, n, 14 + i * 50, -5 + (i % 2) * 5, 1.75)
+        put_char(d, n, 14 + i * 50, -12 + (i % 2) * 5, 1.75)
     d.paste(Image.open(os.path.join(OUT, "coin.png")).resize((36, 36), Image.NEAREST), 158, 14)
 def sc_tea(d):
     grad(d, (30, 30, 72), (124, 114, 156), 0, 36); moon(d, 40, 12, 6)
@@ -439,7 +511,7 @@ def sc_kourin(d):
             d.rect(x + 4.4, sy - h, x + 5.5, sy, (60, 50, 60))
     d.rect(0, 47, SW, SH, (116, 80, 56)); d.rect(0, 47, SW, 49.4, (156, 110, 74))
     d.ell(58, 39, 10.5, 10.5, (94, 64, 150)); d.ell(58, 39, 7.4, 7.4, (132, 82, 212)); d.ell(55.6, 36.4, 2.8, 2.8, (212, 184, 255))
-    put_char(d, "rinnosuke", 122, -5)
+    put_char(d, "rinnosuke", 122, -12)
 def sc_rest(d):
     grad(d, (16, 14, 46), (74, 46, 100)); stars(d, 70, 40, 21); moon(d, 30, 14, 8)
     hills(d, 46, 3, (28, 32, 58), 22); trees(d, 53, 12, (22, 42, 46), 23)
@@ -447,7 +519,7 @@ def sc_rest(d):
     torii(d, 92, 59, 1.35)
     for x in (48, 132):
         d.rect(x, 45, x + 4.6, 57, (126, 126, 136)); d.poly([(x - 2, 45), (x + 6.6, 45), (x + 5, 40.6), (x - 0.4, 40.6)], (136, 136, 146)); d.rect(x + 1, 41.6, x + 3.6, 44, (255, 224, 126))
-    put_char(d, "reimu", 70, 2, 1.6)
+    put_char(d, "reimu", 70, -5, 1.6)
 scene("ev_shrine", sc_shrine); scene("ev_kappa", sc_kappa); scene("ev_fairies", sc_fairies)
 scene("ev_tea", sc_tea); scene("ev_kedama", sc_kedama); scene("ev_kourin", sc_kourin); scene("ev_rest", sc_rest)
 
@@ -472,6 +544,30 @@ for i in range(40):
     x = r.uniform(0, 198); y = r.uniform(0, 255)
     d.rect(x, y, x + 0.5, y + 0.5, (156, 186, 226)); d.rect(x + 0.5, y, x + 1.5, y + 0.5, (94, 124, 174))
 d.save("bg_lake")
+# 第二章：红魔馆的走廊（红地毯）
+d = Dr(200, 256, S)
+d.rect(0, 0, 200, 256, (44, 26, 30)); d.rect(12, 0, 188, 256, (112, 30, 46))
+for x in (16, 181.5):
+    d.rect(x, 0, x + 2.5, 256, (206, 160, 70))
+for yy in range(0, 256, 64):
+    for xx in (60, 100, 140):
+        d.poly([(xx, yy + 12), (xx + 14, yy + 32), (xx, yy + 52), (xx - 14, yy + 32)], (96, 24, 40))
+        d.poly([(xx, yy + 22), (xx + 7, yy + 32), (xx, yy + 42), (xx - 7, yy + 32)], (128, 40, 56))
+    d.rect(22, yy, 178, yy + 1, (96, 24, 40))
+d.save("bg_mansion")
+# 第三章：迷途竹林
+d = Dr(200, 256, S)
+d.rect(0, 0, 200, 256, (14, 34, 30))
+r2 = random.Random(52)
+for i in range(22):
+    x = r2.uniform(0, 196); w = r2.uniform(2.5, 6); c = r2.choice([(34, 78, 54), (28, 64, 48), (44, 96, 62)])
+    d.rect(x, 0, x + w, 256, c); d.rect(x + w * 0.7, 0, x + w, 256, dark(c, 0.8))
+    for yy in range(int(r2.uniform(0, 32)), 256, 32):
+        d.rect(x - 0.5, yy, x + w + 0.5, yy + 1, dark(c, 0.6))
+for i in range(60):
+    x = r2.uniform(0, 200); y = r2.uniform(0, 250); l = r2.uniform(4, 9); a = r2.uniform(-0.6, 0.6)
+    d.poly([(x, y), (x + l * math.cos(a), y + l * math.sin(a) + 1.2), (x + l * 0.5, y - 1)], (60, 124, 74))
+d.save("bg_bamboo")
 # 雾：先画白块再模糊，边缘柔和
 m = Image.new("L", (192 * S, 48 * S), 0)
 md = ImageDraw.Draw(m)
@@ -486,17 +582,17 @@ mist.save(os.path.join(OUT, "mist.png"))
 ic = Dr(192, 192, 1)
 grad(ic, (46, 28, 96), (136, 56, 116), bands=24)
 ic.ell(96, 96, 80, 80, (252, 242, 218)); ic.ell(96, 96, 72, 72, (66, 40, 106))
-ic.paste(char_img("reimu", 3.2).crop((0, 0, 154, 170)), 19, 14)
+ic.paste(char_img("reimu", 3.2).crop((0, 24, 154, 194)), 19, 14)
 ic.im.save(os.path.join(ROOT, "assets", "icon.png"))
 
 # 预览图（开发用）
-names = ["reimu", "fairy_0", "fairy_1", "fairy_red_0", "bigfairy_0", "kedama_0", "rumia", "daiyousei_0", "cirno_0", "cirno_1"]
-sheet = Image.new("RGBA", (len(names) * 104, 300 + 216), (50, 46, 80, 255))
+names = ["c_maid_0", "c_bamboo_0", "c_rabbit", "bat_0", "book", "ghost", "ghost_big", "c_tewi", "c_reisen", "c_kaguya"]
+sheet = Image.new("RGBA", (len(names) * 104, 560), (50, 46, 80, 255))
 for i, n in enumerate(names):
     im = Image.open(os.path.join(OUT, n + ".png"))
     sheet.alpha_composite(im.resize((im.width * 2, im.height * 2), Image.NEAREST), (i * 104 + 4, 6))
-for i, n in enumerate(PORTRAITS):
-    sheet.alpha_composite(Image.open(os.path.join(OUT, "p_%s.png" % n)), (i * 172 + 4, 150))
+for i, n in enumerate(PORTRAITS[6:]):
+    sheet.alpha_composite(Image.open(os.path.join(OUT, "p_%s.png" % n)), (i * 172 + 4, 160))
 sheet.alpha_composite(Image.open(os.path.join(OUT, "bullets.png")), (4, 366 + 44))
 sheet.save("/tmp/art_chars.png")
 sc = Image.new("RGBA", (SW * S * 2 + 6, (SH * S + 4) * 4), (20, 20, 30, 255))

@@ -9,7 +9,7 @@ func _ready() -> void:
 	UI.status(self)
 	UI.label(self, "香霖堂", 22, 12, Color(1, 0.85, 0.5))
 	var rs := Sprite2D.new()
-	rs.texture = G.tex("rinnosuke")
+	rs.texture = G.tex("c_rinnosuke")
 	rs.position = Vector2(G.FIELD_W / 2 + 36, 22)
 	add_child(rs)
 	var y := 42.0

@@ -41,7 +41,7 @@ func setup(arg: Dictionary) -> void:
 func _ready() -> void:
 	field_h = G.field_h()
 	bg = Background.new(); add_child(bg); bg.setup(field_h)
-	bg.mode = "lake"
+	bg.mode = Db.CHAPTERS[G.run.chapter].bg
 	enemies = EnemyLayer.new(); add_child(enemies)
 	items = ItemLayer.new(); add_child(items)
 	shots = ShotLayer.new(); add_child(shots)
@@ -55,7 +55,7 @@ func _ready() -> void:
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_dim)
 	hud = Hud.new(); add_child(hud); hud.setup(self)
-	var hp_mult: float = 1.0 + (G.run.floor - 1) * 0.07
+	var hp_mult: float = (1.0 + (G.run.floor - 1) * 0.07) * pow(1.55, G.run.chapter - 1)
 	waves = Waves.build(G.run.chapter, G.run.floor, kind)
 	set_meta("hp_mult", hp_mult)
 	_next_wave()
@@ -130,7 +130,7 @@ func _tick_waves(dt: float) -> void:
 		var s: Dictionary = pending.pop_front()
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
-			hud.cutin("p_" + Db.BOSSES[s.boss].tex)
+			hud.cutin("p_" + Db.BOSSES[s.boss].tex.trim_prefix("c_"))
 			Au.sfx("warn")
 		else:
 			enemies.spawn(s.kind, s.move, hp_mult)
@@ -181,7 +181,7 @@ func on_enemy_killed(e) -> void:
 			fx.text(player.position + Vector2(0, -14), "+1 心", Color(1, 0.5, 0.6))
 
 func on_boss_phase(e) -> void:
-	hud.cutin("p_" + e.def.tex)
+	hud.cutin("p_" + e.def.tex.trim_prefix("c_"))
 	Au.sfx("phase")
 	bullets.clear_all(fx)
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)

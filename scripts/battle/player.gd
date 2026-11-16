@@ -22,7 +22,7 @@ var _t := 0.0
 
 func _ready() -> void:
 	_sprite = Sprite2D.new()
-	_sprite.texture = G.tex("reimu")
+	_sprite.texture = G.tex("c_reimu")
 	add_child(_sprite)
 	_hit = Sprite2D.new()
 	_hit.texture = G.tex("hitbox")

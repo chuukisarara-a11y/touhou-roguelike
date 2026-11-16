@@ -13,11 +13,11 @@ func _ready() -> void:
 	var y := h * 0.14
 	var body: Label
 	if win:
-		UI.label(self, "第一章 通关", y, 24, Color(1, 0.9, 0.6))
-		body = UI.label(self, "琪露诺被打败了，雾之湖恢复了平静。\n后面的章节还在开发中。", y + 34, 12, Color(0.9, 0.9, 1.0), 10)
+		UI.label(self, "异变解决", y, 24, Color(1, 0.9, 0.6))
+		body = UI.label(self, "月亮恢复了原样，幻想乡又迎来了平静的早晨。\n（隐藏章节还在开发中）", y + 34, 12, Color(0.9, 0.9, 1.0), 10)
 	else:
 		UI.label(self, "满身疮痍", y, 24, Color(1, 0.45, 0.55))
-		body = UI.label(self, "在第 %d 层倒下了。\n下次会更顺利的。" % run.floor, y + 34, 12, Color(0.9, 0.9, 1.0), 10)
+		body = UI.label(self, "在%s的第 %d 层倒下了。\n下次会更顺利的。" % [Db.CHAPTERS[run.chapter].name, run.floor], y + 34, 12, Color(0.9, 0.9, 1.0), 10)
 	y = body.position.y + body.size.y + 10
 	var ws := []
 	for w in run.weapons:

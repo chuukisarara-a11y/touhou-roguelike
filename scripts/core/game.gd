@@ -4,7 +4,6 @@ extends Node
 const FIELD_W := 200.0
 const MAX_WEAPONS := 4
 const TEX_SCALE := 2
-const CHAR_TEX := ["reimu", "fairy_0", "fairy_1", "fairy_red_0", "fairy_red_1", "bigfairy_0", "bigfairy_1", "rumia", "daiyousei_0", "daiyousei_1", "cirno_0", "cirno_1", "nitori", "rinnosuke"]
 # 难度系数（v0.4：整体压力约 +50%）
 const DIFF_SPEED := 1.25    # 敌弹速度
 const DIFF_RATE := 1.3      # 敌人射击频率
@@ -52,7 +51,7 @@ func tex(n: String, raw := false) -> Texture2D:
 			_tex[key] = src
 		else:
 			var it := ImageTexture.create_from_image(src.get_image())
-			var sc := 4 if CHAR_TEX.has(n) else TEX_SCALE   # 角色贴图是 4 倍密度
+			var sc := 4 if n.begins_with("c_") else TEX_SCALE   # c_ 开头的角色贴图是 4 倍密度
 			it.set_size_override(Vector2i(src.get_width() / sc, src.get_height() / sc))
 			_tex[key] = it
 	return _tex[key]
@@ -68,6 +67,13 @@ func new_run() -> void:
 		"chapter_first": true,
 	}
 	run.map = MapGen.generate(1)
+
+func next_chapter() -> void:
+	run.chapter += 1
+	run.floor = 0
+	run.pos = -1
+	run.chapter_first = true
+	run.map = MapGen.generate(run.chapter)
 
 func has(relic: String) -> bool:
 	return run.relics.has(relic)

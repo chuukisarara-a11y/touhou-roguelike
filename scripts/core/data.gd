@@ -49,56 +49,125 @@ const RELICS := {
 }
 
 const ENEMIES := {
-	"fairy": {"tex": "fairy", "anim": true, "hp": 38.0, "r": 7.0, "coins": 1, "atk": "aim1", "cd": 1.6},
-	"fairy_red": {"tex": "fairy_red", "anim": true, "hp": 55.0, "r": 7.0, "coins": 2, "atk": "fan3", "cd": 1.95},
-	"bigfairy": {"tex": "bigfairy", "anim": true, "hp": 260.0, "r": 9.0, "coins": 5, "atk": "ring", "cd": 2.1},
+	"fairy": {"tex": "c_fairy", "anim": true, "hp": 38.0, "r": 7.0, "coins": 1, "atk": "aim1", "cd": 1.6},
+	"fairy_red": {"tex": "c_fairy_red", "anim": true, "hp": 55.0, "r": 7.0, "coins": 2, "atk": "fan3", "cd": 1.95},
+	"bigfairy": {"tex": "c_bigfairy", "anim": true, "hp": 260.0, "r": 9.0, "coins": 5, "atk": "ring", "cd": 2.1},
 	"kedama": {"tex": "kedama", "anim": true, "hp": 20.0, "r": 6.0, "coins": 1, "atk": "", "cd": 9.0},
+	# 第二章
+	"maid": {"tex": "c_maid", "anim": true, "hp": 40.0, "r": 7.0, "coins": 1, "atk": "burst3", "cd": 1.8},
+	"book": {"tex": "book", "hp": 60.0, "r": 7.0, "coins": 2, "atk": "ring8", "cd": 2.0},
+	"bigbook": {"tex": "book", "hp": 280.0, "r": 8.0, "coins": 5, "atk": "spiral", "cd": 0.45},
+	"bat": {"tex": "bat", "anim": true, "hp": 20.0, "r": 6.0, "coins": 1, "atk": "aim1", "cd": 1.4},
+	# 第三章
+	"rabbit": {"tex": "c_rabbit", "hp": 42.0, "r": 7.0, "coins": 1, "atk": "fan5", "cd": 2.0},
+	"bamboo": {"tex": "c_bamboo", "anim": true, "hp": 58.0, "r": 7.0, "coins": 2, "atk": "cross", "cd": 1.5},
+	"bigghost": {"tex": "ghost_big", "hp": 300.0, "r": 10.0, "coins": 5, "atk": "ringaim", "cd": 2.2},
+	"ghost": {"tex": "ghost", "hp": 22.0, "r": 6.0, "coins": 1, "atk": "slowbig", "cd": 1.6},
 }
 
 const BOSSES := {
-	"rumia": {"name": "露米娅", "tex": "rumia", "r": 9.0, "coins": 45, "phases": [
+	"rumia": {"name": "露米娅", "tex": "c_rumia", "r": 9.0, "coins": 45, "phases": [
 		{"name": "", "hp": 480.0, "pat": "rumia0"},
 		{"name": "夜符「夜雀之歌」", "hp": 800.0, "pat": "rumia1"}]},
-	"daiyousei": {"name": "大妖精", "tex": "daiyousei", "anim": true, "r": 9.0, "coins": 45, "phases": [
+	"daiyousei": {"name": "大妖精", "tex": "c_daiyousei", "anim": true, "r": 9.0, "coins": 45, "phases": [
 		{"name": "", "hp": 480.0, "pat": "dai0"},
 		{"name": "妖精「绿野之风」", "hp": 800.0, "pat": "dai1"}]},
-	"cirno": {"name": "琪露诺", "tex": "cirno", "anim": true, "r": 9.0, "coins": 90, "phases": [
+	"cirno": {"name": "琪露诺", "tex": "c_cirno", "anim": true, "r": 9.0, "coins": 90, "phases": [
 		{"name": "冰符「冰瀑」", "hp": 1400.0, "pat": "cirno1"},
 		{"name": "冻符「完美冻结」", "hp": 1500.0, "pat": "cirno2"},
 		{"name": "雪符「钻石风暴」", "hp": 1600.0, "pat": "cirno3"}]},
+	"meiling": {"name": "红美铃", "tex": "c_meiling", "r": 9.0, "coins": 50, "phases": [
+		{"name": "", "hp": 480.0, "pat": "mei0"},
+		{"name": "华符「芳华绚烂」", "hp": 820.0, "pat": "mei1"}]},
+	"patchouli": {"name": "帕秋莉", "tex": "c_patchouli", "r": 9.0, "coins": 50, "phases": [
+		{"name": "", "hp": 480.0, "pat": "pat0"},
+		{"name": "火水符「燃素之雨」", "hp": 820.0, "pat": "pat1"}]},
+	"sakuya": {"name": "十六夜咲夜", "tex": "c_sakuya", "r": 9.0, "coins": 100, "phases": [
+		{"name": "幻象「月神之钟」", "hp": 1400.0, "pat": "saku1"},
+		{"name": "幻世「The World」", "hp": 1500.0, "pat": "saku2"},
+		{"name": "幻符「杀人玩偶」", "hp": 1600.0, "pat": "saku3"}]},
+	"tewi": {"name": "因幡帝", "tex": "c_tewi", "r": 9.0, "coins": 55, "phases": [
+		{"name": "", "hp": 480.0, "pat": "tewi0"},
+		{"name": "兔符「因幡的素兔」", "hp": 820.0, "pat": "tewi1"}]},
+	"reisen": {"name": "铃仙", "tex": "c_reisen", "r": 9.0, "coins": 55, "phases": [
+		{"name": "", "hp": 480.0, "pat": "rei0"},
+		{"name": "幻波「赤眼催眠」", "hp": 820.0, "pat": "rei1"}]},
+	"kaguya": {"name": "蓬莱山辉夜", "tex": "c_kaguya", "r": 9.0, "coins": 110, "phases": [
+		{"name": "难题「佛御石之钵」", "hp": 1400.0, "pat": "kagu1"},
+		{"name": "难题「火鼠的皮衣」", "hp": 1500.0, "pat": "kagu2"},
+		{"name": "难题「蓬莱的玉枝」", "hp": 1600.0, "pat": "kagu3"}]},
 }
 
+## mobs: 波次生成用的四种角色 [排成一排的, 火力点, 大型, 成串冲下来的]
 const CHAPTERS := {
-	1: {"name": "第一章 雾之湖", "elites": ["rumia", "daiyousei"], "boss": "cirno"},
+	1: {"name": "第一章 雾之湖", "bg": "lake", "elites": ["rumia", "daiyousei"], "boss": "cirno", "mobs": ["fairy", "fairy_red", "bigfairy", "kedama"]},
+	2: {"name": "第二章 红魔馆", "bg": "mansion", "elites": ["meiling", "patchouli"], "boss": "sakuya", "mobs": ["maid", "book", "bigbook", "bat"]},
+	3: {"name": "第三章 迷途竹林", "bg": "bamboo", "elites": ["tewi", "reisen"], "boss": "kaguya", "mobs": ["rabbit", "bamboo", "bigghost", "ghost"]},
+}
+
+## Boss 战前对话。choices 的 op: bomb 符卡槽充满 / heal 回1心 / money 得 n 钱
+const TALKS := {
+	"cirno": {"lines": [
+		["boss", "站住！这片湖是本大爷的地盘！"],
+		["reimu", "又是你啊。今晚雾这么大，是你搞的鬼？"],
+		["boss", "不知道！但是只要打赢你，大家就会承认我是最强的了！"],
+		["reimu", "……算了，问你也是白问。"]],
+	 "choices": [
+		{"text": "「那就速战速决。」", "op": "bomb", "reply": "哼，可别哭着回去哦！"},
+		{"text": "「输了的话，湖边的赛钱归我。」", "op": "money", "n": 30, "reply": "赛、赛钱？！那是我攒了好久的……才不会输！"}]},
+	"sakuya": {"lines": [
+		["boss", "欢迎光临红魔馆。很遗憾，大小姐今晚不见客。"],
+		["reimu", "我不是来做客的。馆里的妖精发了疯似的往外冲，怎么回事？"],
+		["boss", "那是……馆内的事务。请回吧，地毯才刚打扫过。"],
+		["reimu", "那可不行。月亮变成那个样子，总得有人负责。"],
+		["boss", "那么，请容我用飞刀送客。"]],
+	 "choices": [
+		{"text": "「我赶时间，快点。」", "op": "bomb", "reply": "时间吗。在这座馆里，那是我说了算的东西。"},
+		{"text": "「打完记得上茶。」", "op": "heal", "reply": "……茶已经备好了。不过，要等您站得起来再说。"}]},
+	"kaguya": {"lines": [
+		["boss", "哎呀，这么晚了还有客人。永琳，是你叫的外卖吗？"],
+		["reimu", "谁是外卖啊。竹林里的兔子到处乱窜，是你们干的吧。"],
+		["boss", "今晚的月亮有些奇怪，她们只是坐不住罢了。"],
+		["reimu", "月亮……果然，一路上的异变都和它有关。"],
+		["boss", "想知道的话，就先解开我的难题吧。放心，今晚只出三道。"]],
+	 "choices": [
+		{"text": "「三道就三道。」", "op": "bomb", "reply": "真干脆。上一个这么说的人，现在还在竹林里迷路呢。"},
+		{"text": "「解开了有奖品吗？」", "op": "money", "n": 40, "reply": "呵呵，先付你一点定金好了。剩下的，赢了再说。"}]},
 }
 
 ## 事件。ops: ["money",n] ["heal",n] ["hurt",n] ["bomb"] ["relic",最低稀有度] ["upgrade"] ["maxhp",n]
 ## cost: 需要花的钱；alt: 50% 概率改为执行 alt
 const EVENTS := [
 	{"title": "路边的小神社", "art": "ev_shrine", "text": "参道旁有一座没人打理的小神社，赛钱箱里空空如也。",
+	 "talk": [["旁白", "参道旁有一座没人打理的小神社，赛钱箱里空空如也。"], ["灵梦", "……同行啊。看着怪心酸的。"]],
 	 "choices": [
-		{"text": "投入20钱（回2心）", "cost": 20, "ops": [["heal", 2]]},
+		{"text": "投入20钱（回2心）", "cost": 20, "say": "（清脆的一声，心里踏实了不少。）", "ops": [["heal", 2]]},
 		{"text": "只是拜一拜（符卡槽充满）", "ops": [["bomb"]]},
 		{"text": "离开", "ops": []}]},
 	{"title": "河童的摊位", "art": "ev_kappa", "text": "荷取在路边兜售一些看起来很可疑的发明。",
+	 "talk": [["荷取", "哟，盟友！来看看河童的最新发明吧，童叟无欺！"], ["灵梦", "上次你卖我的自动扫帚，把神社的屋顶扫飞了。"], ["荷取", "那、那是旧型号！这次的绝对没问题！"]],
 	 "choices": [
-		{"text": "花40钱买一件（随机宝具）", "cost": 40, "ops": [["relic", 0]]},
+		{"text": "花40钱买一件（随机宝具）", "cost": 40, "say": "荷取：「谢谢惠顾！坏了不退哦！」", "ops": [["relic", 0]]},
 		{"text": "帮忙试用（一半概率强化符札，一半概率受伤）", "ops": [["upgrade"]], "alt": [["hurt", 1]]},
 		{"text": "离开", "ops": []}]},
 	{"title": "三月精的恶作剧", "art": "ev_fairies", "text": "回过神来，钱包已经被光之三妖精摸走了。",
+	 "talk": [["桑尼", "嘿嘿，得手啦！巫女的钱包好轻哦！"], ["露娜", "嘘——！她看过来了！"], ["灵梦", "……你们三个，给我站住。"]],
 	 "choices": [
-		{"text": "追上去（失去1心，夺回并多拿50钱）", "ops": [["hurt", 1], ["money", 50]]},
+		{"text": "追上去（失去1心，夺回并多拿50钱）", "say": "斯塔：「呜哇，她真的追上来了——！」", "ops": [["hurt", 1], ["money", 50]]},
 		{"text": "算了（失去15钱）", "ops": [["money", -15]]}]},
 	{"title": "湖边的茶会", "art": "ev_tea", "text": "雾气里摆着一张小桌，一壶红茶还冒着热气，四下无人。",
+	 "talk": [["旁白", "雾气里摆着一张小桌，一壶红茶还冒着热气，四下无人。"], ["灵梦", "这个香味……是红魔馆的茶叶。谁落在这儿的？"]],
 	 "choices": [
-		{"text": "坐下喝一杯（回1心）", "ops": [["heal", 1]]},
+		{"text": "坐下喝一杯（回1心）", "say": "（很好喝。身体暖和起来了。）", "ops": [["heal", 1]]},
 		{"text": "顺走茶叶（获得30钱）", "ops": [["money", 30]]}]},
 	{"title": "毛玉的大群", "art": "ev_kedama", "text": "数不清的毛玉堵住了去路，在空中滚来滚去。",
+	 "talk": [["旁白", "数不清的毛玉堵住了去路，在空中滚来滚去。"], ["灵梦", "啧，偏偏在这种时候。"]],
 	 "choices": [
-		{"text": "强行突破（失去1心，强化一张符札）", "ops": [["hurt", 1], ["upgrade"]]},
+		{"text": "强行突破（失去1心，强化一张符札）", "say": "（弄得一身毛，不过手感练出来了。）", "ops": [["hurt", 1], ["upgrade"]]},
 		{"text": "绕路走", "ops": []}]},
 	{"title": "香霖的委托", "art": "ev_kourin", "text": "森近霖之助拿出一件来历不明的古道具，想请你试用。",
+	 "talk": [["霖之助", "你来得正好。这件道具是今早在无缘冢捡到的。"], ["灵梦", "又是来历不明的东西。它有什么用？"], ["霖之助", "名字是知道的，用途嘛……所以才想请你试试。"]],
 	 "choices": [
-		{"text": "接受（心的上限-1，获得稀有宝具）", "ops": [["maxhp", -1], ["relic", 1]]},
+		{"text": "接受（心的上限-1，获得稀有宝具）", "say": "霖之助：「果然很有意思。记得告诉我使用感想。」", "ops": [["maxhp", -1], ["relic", 1]]},
 		{"text": "婉拒（获得15钱）", "ops": [["money", 15]]}]},
 ]

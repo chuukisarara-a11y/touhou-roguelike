@@ -12,6 +12,8 @@ class Bullet:
 	var grazed := false
 	var dead := false
 	var tag := ""
+	var age := 0.0
+	var spd := 0.0   # “停顿后狙击”弹的再出发速度
 
 const RADII := [2.5, 5.0, 2.0]
 var list := []
@@ -22,7 +24,7 @@ func _ready() -> void:
 
 func add(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
 	var b := Bullet.new()
-	b.pos = pos; b.vel = vel * G.DIFF_SPEED; b.shape = shape; b.col = col; b.tag = tag
+	b.pos = pos; b.vel = vel * G.DIFF_SPEED * (1.0 + 0.05 * (G.run.get("chapter", 1) - 1)); b.spd = b.vel.length(); b.shape = shape; b.col = col; b.tag = tag
 	b.r = RADII[shape]
 	if list.size() < 700:
 		list.append(b)
@@ -50,6 +52,13 @@ func tick(dt: float, battle) -> void:
 	for b in list:
 		if b.dead:
 			continue
+		b.age += dt
+		if b.tag == "sa":   # 飞一小段后停住，再朝自机射出
+			if b.age > 1.5:
+				b.vel = (pp - b.pos).normalized() * b.spd
+				b.tag = ""
+			elif b.age > 0.7:
+				b.vel = Vector2.ZERO
 		b.vel += b.acc * dt
 		b.pos += b.vel * dt
 		if b.pos.x < -10 or b.pos.x > G.FIELD_W + 10 or b.pos.y < -10 or b.pos.y > h + 10:

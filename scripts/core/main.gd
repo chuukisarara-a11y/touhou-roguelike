@@ -10,6 +10,7 @@ const SCREENS := {
 	"event": "res://scripts/screens/event.gd",
 	"rest": "res://scripts/screens/rest.gd",
 	"result": "res://scripts/screens/result.gd",
+	"talk": "res://scripts/screens/talk.gd",
 }
 
 var screen: Node
@@ -50,6 +51,8 @@ func _pick_bgm(name: String, arg: Dictionary) -> void:
 	match name:
 		"title":
 			Au.bgm("title")
+		"talk":
+			Au.bgm("")
 		"battle":
 			var ch: int = G.run.chapter
 			Au.bgm(("boss%d" % ch) if arg.get("kind", "") == "boss" else ("battle%d" % ch))
@@ -73,6 +76,8 @@ func enter_node(i: int) -> void:
 				run.chapter_first = false
 				run.money += 25
 				battle_done({"kind": "battle", "no_hit": false, "earned": 25, "skipped": true})
+			elif node.type == "boss":
+				goto("talk", {"boss": Db.CHAPTERS[run.chapter].boss})
 			else:
 				goto("battle", {"kind": node.type})
 		_:
@@ -92,7 +97,11 @@ func battle_done(info: Dictionary) -> void:
 func node_done() -> void:
 	var node: Dictionary = G.run.map[G.run.pos]
 	if node.type == "boss":
-		goto("result", {"win": true})
+		if G.run.chapter < Db.CHAPTERS.size():
+			G.next_chapter()
+			goto("map")
+		else:
+			goto("result", {"win": true})
 	else:
 		goto("map")
 
