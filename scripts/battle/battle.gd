@@ -185,6 +185,11 @@ func _process(real_dt: float) -> void:
 		end_t -= real_dt
 		if end_t <= 0.0:
 			set_process(false)
+			if not G.bot:
+				G.meta.kills += kills
+				if G.meta.kills >= 1000:
+					G.ach("kills1000")
+				G.save_meta()
 			if G.bot:
 				var at = G.main.get_children().filter(func(c): return c.has_method("note"))
 				at[0].note("%s hits=%d kills=%d t=%.0fs" % [kind, hits, kills, _bt])
@@ -291,10 +296,20 @@ func _tick_spark(dt: float) -> void:
 	player.invuln = maxf(player.invuln, 0.3)
 	shake = maxf(shake, 0.06)
 
+## 符卡限时到了：直接进入下一阶段（不算收取）；最后一张则算击破
+func on_spell_timeout(e) -> void:
+	phase_clean = false
+	banner = "时间到"
+	banner_t = 1.2
+	e.hp = 0.001
+	e.hurt(1.0, self)
+
 func slow_max() -> float:
 	return SLOW_MAX * (2.0 if G.has("bullet_time") else 1.0)
 
 func add_bomb(v: float) -> void:
+	if G.asc() >= 10 and v > 0.0 and v < 1.0:
+		v *= 0.75
 	G.run.bomb = minf(float(G.bomb_max()), G.run.bomb + v)
 
 func graze_radius() -> float:
@@ -303,6 +318,10 @@ func graze_radius() -> float:
 ## 擦弹：连击越高充能越快；「御札返し」会顺手反击
 func on_graze(pos: Vector2) -> void:
 	graze_combo += 1
+	if graze_combo == 50:
+		G.ach("combo50")
+	elif graze_combo == 100:
+		G.ach("combo100")
 	combo_t = 0.8 * (2.0 if G.has("focus") else 1.0)
 	grazes += 1
 	G.run.grazes_ch += 1
@@ -361,6 +380,12 @@ func on_enemy_killed(e) -> void:
 		bullets.clear_near(e.pos, 45.0, fx)
 	if e.is_boss:
 		_spell_result(e.phases[e.phase_i])
+		var aid: String = "boss_" + e.kind.trim_suffix("_b")
+		if kind == "boss":
+			if Db.ACH.has(aid):
+				G.ach(aid)
+			if hits == 0:
+				G.ach("nohit_boss")
 		if Db.DEFEAT.has(e.kind):
 			defeat_line = "%s：「%s」" % [e.def.name, Db.DEFEAT[e.kind]]
 		_clear_to_points()
@@ -390,6 +415,19 @@ func on_boss_phase(e) -> void:
 
 ## 符卡收取：本阶段没被弹、没放符卡 → 额外奖励
 func _spell_result(ph: Dictionary) -> void:
+	if ph.name != "" and boss != null and not G.bot:   # 图鉴：这张符卡的挑战 / 收取次数
+		var key: String = boss.kind + ":" + ph.name
+		var rec: Dictionary = G.meta.spells.get(key, {"try": 0, "cap": 0})
+		rec.try += 1
+		if phase_clean:
+			rec.cap += 1
+			G.meta.caps += 1
+			G.ach("capture1")
+			if G.meta.caps >= 20:
+				G.ach("capture20")
+			if ph.name.contains("The World"):
+				G.ach("timestop")
+		G.meta.spells[key] = rec
 	if ph.name != "" and phase_clean:
 		var bonus: int = 12 * G.run.chapter
 		G.run.money += bonus
@@ -413,7 +451,7 @@ func player_hit() -> void:
 	phase_clean = false
 	graze_combo = 0
 	Au.sfx("phit")
-	bullets.clear_all(fx)
+	bullets.clear_near(player.position, 64.0, fx)   # 只消掉身边的子弹
 	fx.burst(player.position, Color(1, 0.3, 0.4), 24, 36.0)
 	shake = 0.3
 	player.invuln = 2.0 + (1.0 if G.has("camo") else 0.0)
@@ -457,6 +495,8 @@ func use_bomb() -> void:
 		fx.text(player.position + Vector2(0, -18), "还没存满", Color(1, 0.8, 0.5))
 		return
 	k = mini(k, 3)
+	if k >= 3:
+		G.ach("bomb3")
 	G.run.bomb -= k
 	phase_clean = false
 	Au.sfx("bomb")

@@ -17,7 +17,7 @@ static func ring(b, pos: Vector2, n: int, speed: float, offset := 0.0, shape := 
 
 static func every(e, key: String, iv: float, dt: float) -> bool:
 	if not key.begins_with("_"):
-		iv /= G.DIFF_RATE
+		iv /= G.DIFF_RATE * G.asc_rate()
 	var v: float = e.tm.get(key, iv * 0.6) - dt
 	if v <= 0.0:
 		e.tm[key] = v + iv

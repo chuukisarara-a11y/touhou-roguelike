@@ -168,8 +168,9 @@ func _draw() -> void:
 	var p: Player = battle.player
 	if p.laser_t > 0.0 and battle.state != "lost":
 		var lw: float = p.laser_w
-		draw_rect(Rect2(p.position.x - lw / 2 - 1, 0, lw + 2, p.position.y - 10), Color(0.4, 0.8, 1.0, 0.45))
-		draw_rect(Rect2(p.position.x - lw / 2 + 1, 0, maxf(lw - 2, 1), p.position.y - 10), Color(0.9, 1.0, 1.0, 0.85))
+		for lo in p.laser_offs:
+			draw_rect(Rect2(p.position.x + lo - lw / 2 - 1, 0, lw + 2, p.position.y - 10), Color(0.4, 0.8, 1.0, 0.45))
+			draw_rect(Rect2(p.position.x + lo - lw / 2 + 1, 0, maxf(lw - 2, 1), p.position.y - 10), Color(0.9, 1.0, 1.0, 0.85))
 	for z in zones:
 		if z[2] > 0.0:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.8, 0.4, 0.12))

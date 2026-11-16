@@ -15,6 +15,7 @@ var orb_ang := 0.0
 var dolls := []
 var laser_w := 0.0
 var laser_t := 0.0
+var laser_offs := [0.0]
 var fams := []          # 使魔：[pos, eat_cd]
 var fam_cd := 0.0
 var speed_s := 99.0     # 平滑后的移动速度

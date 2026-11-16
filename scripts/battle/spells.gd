@@ -24,6 +24,21 @@ static func fan(b, pos: Vector2, base: float, n: int, spread: float, spd: float,
 static func aim(b, from: Vector2) -> float:
 	return (b.player.position - from).angle()
 
+## 给固定弹道加一点随机：方向 ±ang 弧度，速度 ±spd 比例
+static func jitter(arr: Array, ang := 0.06, spd := 0.08) -> Array:
+	for bl in arr:
+		if bl != null:
+			bl.vel = bl.vel.rotated(randf_range(-ang, ang)) * (1.0 + randf_range(-spd, spd))
+	return arr
+
+## 从一侧水平方向扫向另一侧的一组激光：只扫过下方约 3/5 的区域就消失，剩下的 2/5 是安全区。
+## dir = 1 从右往左扫，-1 从左往右扫；n 道激光前后相隔 gap 弧度
+static func sweep_lasers(b, e, dir: float, n: int, gap: float, rot: float, col: int, warn := 1.2, width := 6.0) -> void:
+	var life := 0.6 * PI / rot
+	for i in n:
+		var a0 := (0.0 if dir > 0.0 else PI) - dir * gap * i
+		b.bullets.laser(e.pos, a0, 520.0, width, warn, life, (col + i * 2) % 7, dir * rot, e)
+
 ## 先静止 d 秒再出发
 static func hold(bl, d: float) -> void:
 	if bl == null:
@@ -31,6 +46,27 @@ static func hold(bl, d: float) -> void:
 	bl.hold = bl.vel
 	bl.vel = Vector2.ZERO
 	bl.delay = d
+
+## 爱丽丝的人偶：保持 n 个；被打掉的每 6 秒复活一个
+static func _dolls(b, e, n: int, radius: float, dt: float) -> void:
+	var alive := 0
+	for en in b.enemies.list:
+		if en.owner == e and not en.dead and not en.gone:
+			alive += 1
+	if not e.tm.has("dolls"):
+		e.tm["dolls"] = true
+		for i in n:
+			b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": TAU * i / n, "r": radius}, b.get_meta("hp_mult"))
+		return
+	if alive < n:
+		e.tm["_rs"] = e.tm.get("_rs", 0.0) + dt
+		if e.tm["_rs"] >= 6.0:
+			e.tm["_rs"] = 0.0
+			var ang := randf() * TAU
+			b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": ang, "r": radius}, b.get_meta("hp_mult"))
+			b.fx.burst(e.pos + Vector2.from_angle(ang) * radius, Color(1.0, 0.85, 0.5), 14, 24.0)
+	else:
+		e.tm["_rs"] = 0.0
 
 static func run(e, id: String, dt: float, b) -> void:
 	var t: float = e.pt
@@ -44,12 +80,12 @@ static func run(e, id: String, dt: float, b) -> void:
 			if every(e, "b", 1.5, dt):
 				fan(b, P, aim(b, P), 7, 0.9, 80.0, 0, 0)
 		"rumia1":  # 夜符「夜雀之歌」：左右交替扫出的弧形米弹，像鸟群展翅
-			if every(e, "a", 0.04, dt):
+			if every(e, "a", 0.08, dt):   # 弹量是原来的一半；弯得更缓、飞得更远，能到达屏幕下半
 				var ph := fmod(t * 0.8, 1.0)
 				var side := 1.0 if int(t * 0.8) % 2 == 0 else -1.0
-				var a := PI / 2.0 + side * (1.35 - ph * 2.2)
-				var bl = shot(b, P, a, 46.0 + ph * 26.0, 2, 1 if side > 0 else 4)
-				bl.w = -side * 0.45
+				var a := PI / 2.0 + side * (1.25 - ph * 2.0)
+				var bl = shot(b, P, a, 58.0 + ph * 30.0, 2, 1 if side > 0 else 4)
+				bl.w = -side * 0.2
 			if every(e, "b", 1.3, dt):
 				fan(b, P, aim(b, P), 3, 0.35, 70.0, 1, 0)
 		"dai0":
@@ -60,11 +96,18 @@ static func run(e, id: String, dt: float, b) -> void:
 				fan(b, P, aim(b, P), 5, 0.5, 82.0, 0, 6)
 		"dai1":  # 妖精「绿野之风」：瞬移 → 三层延迟花环；顶部飘落旋转的叶弹
 			if every(e, "tp", 2.6, dt):
-				b.fx.burst(P, Color(0.5, 1, 0.6), 16, 30.0)
+				var green := Color(0.45, 1.0, 0.55)
+				var old := P
+				b.fx.burst(P, green, 30, 46.0)
+				b.fx.burst(P, Color(0.8, 1.0, 0.85), 10, 22.0)
 				e.pos = Vector2(randf_range(40, 160), randf_range(45, 95))
 				e.target = e.pos
 				P = e.pos
-				b.fx.burst(P, Color(0.5, 1, 0.6), 16, 30.0)
+				for k in 14:   # 瞬移的绿色残光
+					b.fx.spark(old.lerp(P, k / 13.0), green)
+				b.fx.burst(P, green, 30, 46.0)
+				b.fx.burst(P, Color(0.8, 1.0, 0.85), 10, 22.0)
+				Au.sfx("select", -4.0)
 				var off := randf() * TAU
 				for layer in 3:
 					for bl in ring(b, P, 20 + layer * 6, 34.0 + layer * 14.0, off + layer * 0.1, 0 if layer < 2 else 4, [2, 6, 2][layer]):
@@ -84,7 +127,7 @@ static func run(e, id: String, dt: float, b) -> void:
 			var c := fmod(t, 6.0)
 			if c < 2.0:
 				if every(e, "a", 0.022, dt):
-					shot(b, P, randf() * TAU, randf_range(50, 105), 0 if randf() < 0.75 else 1, randi() % 6).tag = "pf"
+					shot(b, P, randf() * TAU, randf_range(45.0, b.field_h * 0.4), 0 if randf() < 0.75 else 1, randi() % 6).tag = "pf"   # 速度按屏幕高度取，长屏也能铺满
 			elif c < 3.6:
 				if not e.tm.get("frozen", false):
 					e.tm["frozen"] = true
@@ -118,30 +161,33 @@ static func run(e, id: String, dt: float, b) -> void:
 				fan(b, P, aim(b, P) + 0.12 * e.tm["z"], 5, 0.7, 90.0, 3, 1)
 			if every(e, "b", 2.2, dt):
 				ring(b, P, 20, 55.0, randf() * TAU, 3, 6)
-		"alice1":  # 咒符「上海人偶」：四个人偶绕着爱丽丝转并各自开火，打掉人偶可以减轻火力
-			if not e.tm.has("dolls"):
-				e.tm["dolls"] = true
-				for i in 4:
-					b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": TAU * i / 4.0, "r": 36.0}, b.get_meta("hp_mult"))
-			if every(e, "a", 1.3, dt):
-				ring(b, P, 20, 46.0, t * 0.7, 0, 1)
-				ring(b, P, 20, 34.0, -t * 0.7, 2, 5)
+		"alice1":  # 咒符「上海人偶」：人偶绕着爱丽丝转并各自开火（打掉后 6 秒复活）；爱丽丝抛出会炸开的人偶弹
+			_dolls(b, e, 4, 36.0, dt)
+			if every(e, "a", 1.5, dt):
+				ring(b, P, 16, 40.0, t * 0.7, 2, 5)
+			if every(e, "b", 1.9, dt):   # 抛出人偶弹：飞一段后炸成一圈小弹
+				for bl in fan(b, P, aim(b, P), 5, 1.5, 62.0, 7, int(t) % 6):
+					bl.split = 1.1
+					bl.split_n = 8
+					bl.split_spread = TAU * 7.0 / 8.0
 		"alice2":  # 战符「小小军势」：一排排札弹列队行军，缺口像蛇一样左右摆动
 			if every(e, "a", 0.75, dt):
-				var g: int = clampi(e.tm.get("g", 5) + randi_range(-1, 1), 1, 8)
+				var step: int = [-2, -1, 1, 2][randi() % 4]   # 缺口每排必定挪位，不能一条直线穿过去
+				var g: int = e.tm.get("g", 5) + step
+				if g < 1 or g > 8:
+					g -= step * 2
 				e.tm["g"] = g
 				e.tm["row"] = e.tm.get("row", 0) + 1
-				for i in 11:
+				var xo := randf_range(-0.4, 0.4)          # 每排横向错开一点
+				var sp := randf_range(41.0, 47.0)         # 每排下落速度略有不同
+				for i in range(-1, 12):
 					if i == g or i == g + 1:
 						continue
-					b.bullets.add(Vector2((i + 0.5) / 11.0 * G.FIELD_W, -4), Vector2(0, 44), 6, 1 if int(e.tm["row"]) % 2 == 0 else 5)
+					b.bullets.add(Vector2((i + 0.5 + xo) / 11.0 * G.FIELD_W, -4), Vector2(0, sp), 6, 1 if int(e.tm["row"]) % 2 == 0 else 5)
 			if every(e, "b", 1.6, dt):
 				fan(b, P, aim(b, P), 3, 0.4, 84.0, 3, 3)
 		"alice3":  # 咒诅「魔彩光的上海人偶」：五个人偶各自射出缓缓转动的彩色激光
-			if not e.tm.has("dolls"):
-				e.tm["dolls"] = true
-				for i in 5:
-					b.enemies.spawn("a_doll", {"type": "orbit", "owner": e, "ang": TAU * i / 5.0, "r": 42.0}, b.get_meta("hp_mult"))
+			_dolls(b, e, 5, 42.0, dt)
 			if not e.tm.has("_las"):
 				e.tm["_las"] = 1.0
 			if every(e, "_las", 4.2, dt):
@@ -270,9 +316,9 @@ static func run(e, id: String, dt: float, b) -> void:
 		"tewi0":
 			if every(e, "a", 0.45, dt):
 				e.tm["z"] = -e.tm.get("z", 1.0)
-				fan(b, P, aim(b, P) + 0.3 * e.tm["z"], 3, 0.2, 86.0, 2, 3)
+				fan(b, P, aim(b, P) + 0.3 * e.tm["z"], 6, 0.5, 86.0, 2, 3)
 			if every(e, "b", 2.0, dt):
-				ring(b, P, 24, 50.0, randf() * TAU, 4, 3)
+				jitter(ring(b, P, 48, 50.0, randf() * TAU, 4, 3))
 		"tewi1":  # 兔符「因幡的素兔」：会在墙上反弹的大玉 + 星弹花环
 			if every(e, "a", 0.6, dt):
 				for bl in ring(b, P, 12, 58.0, t * 0.8, 1, 3):
@@ -287,10 +333,11 @@ static func run(e, id: String, dt: float, b) -> void:
 			if every(e, "b", 1.8, dt):
 				ring(b, P, 32, 48.0, randf() * TAU, 0, 4)
 		"rei1":  # 幻波「赤眼催眠」：旋转的红色激光 + 停顿后重新瞄准的幻觉弹环
-			if every(e, "las", 4.5, dt):
-				var off4 := randf() * TAU
-				for i in 4:
-					b.bullets.laser(P, off4 + i * TAU / 4.0, 420.0, 7.0, 1.0, 2.6, 0, 0.5, e)
+			if not e.tm.has("_las"):
+				e.tm["_las"] = 1.0
+			if every(e, "_las", 6.0, dt):   # 两道激光从一侧扫过下方约 3/5 就消失，每轮换边
+				e.tm["ld"] = -e.tm.get("ld", -1.0)
+				sweep_lasers(b, e, e.tm["ld"], 2, 0.5, 0.5, 0, 1.1, 7.0)
 			if every(e, "a", 1.4, dt):
 				var n2 := 0
 				for bl in ring(b, P, 28, 76.0, t, 0, 4):
@@ -298,19 +345,19 @@ static func run(e, id: String, dt: float, b) -> void:
 					bl.col = 0 if n2 % 2 == 0 else 4
 					bl.tag = "sa"
 					bl.go_spread = randf_range(-0.2, 0.2)
-		"kagu1":  # 难题「佛御石之钵」：四道彩色激光缓缓旋转（每轮换方向），激光之间涌出子弹
+		"kagu1":  # 难题「佛御石之钵」：三道激光从一侧扫过下方约 3/5 后消失（每轮换边）；
+			# 稀疏的固定弹道与激光反方向旋转，另有少量缓慢的自机狙
 			if not e.tm.has("_las"):
 				e.tm["_las"] = 0.8
-			if every(e, "_las", 7.0, dt):
-				e.tm["lo"] = randf() * TAU
-				e.tm["lt"] = t
-				e.tm["lr"] = -e.tm.get("lr", -0.16)
-				for i in 4:
-					b.bullets.laser(P, e.tm["lo"] + i * TAU / 4.0, 420.0, 6.0, 1.3, 4.2, i * 2 % 7, e.tm["lr"], e)
-			if every(e, "a", 0.2, dt):
-				var lo: float = e.tm.get("lo", 0.0) + e.tm.get("lr", 0.16) * (t - e.tm.get("lt", t))
-				for i in 4:
-					shot(b, P, lo + (i + 0.5) * TAU / 4.0 + randf_range(-0.25, 0.25), 50.0, 0, 6)
+			if every(e, "_las", 8.0, dt):
+				e.tm["ld"] = -e.tm.get("ld", -1.0)
+				sweep_lasers(b, e, e.tm["ld"], 3, 0.42, 0.32, 0, 1.3, 6.0)
+			if every(e, "a", 0.3, dt):
+				var ld: float = e.tm.get("ld", 1.0)
+				for k in 3:
+					shot(b, P, -ld * t * 0.55 + k * TAU / 3.0, 46.0, 2, 6)
+			if every(e, "b", 1.7, dt):
+				fan(b, P, aim(b, P), 2, 0.18, 40.0, 0, 3)
 		"kagu2":  # 难题「火鼠的皮衣」：旋转的火球一边飞一边向两侧洒下火星
 			if every(e, "a", 0.4, dt):
 				for k in 3:
@@ -334,16 +381,16 @@ static func run(e, id: String, dt: float, b) -> void:
 		"ran0":
 			if every(e, "a", 0.7, dt):
 				e.tm["z"] = -e.tm.get("z", 1.0)
-				ring(b, P, 18, 56.0, t * 0.5 * e.tm["z"], 2, 3)
+				jitter(ring(b, P, 36, 56.0, t * 0.5 * e.tm["z"], 2, 3))
 			if every(e, "b", 1.4, dt):
-				fan(b, P, aim(b, P), 5, 0.5, 92.0, 6, 0)
+				fan(b, P, aim(b, P), 10, 0.9, 92.0, 6, 0)
 		"ran1":  # 式神「十二神将之宴」：十二个式神绕着蓝旋转，各自向外开火
-			if every(e, "a", 0.3, dt):
+			if every(e, "a", 0.15, dt):
 				for i in 12:
 					var a6: float = t * 0.9 + i * TAU / 12.0
-					shot(b, P + Vector2.from_angle(a6) * 28.0, a6 + 0.5, 58.0, 6, i % 6)
+					jitter([shot(b, P + Vector2.from_angle(a6) * 28.0, a6 + 0.5, 58.0, 6, i % 6)])
 			if every(e, "b", 1.8, dt):
-				ring(b, P, 36, 34.0, randf() * TAU, 0, 6)
+				jitter(ring(b, P, 72, 34.0, randf() * TAU, 0, 6))
 		"yuk1":  # 境符「四重结界」：四面八方推来的弹墙，每面墙留一个缺口；中心不断放蝴蝶
 			if every(e, "wall", 1.1, dt):
 				var side2: int = e.tm.get("side", 0)

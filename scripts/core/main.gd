@@ -13,12 +13,36 @@ const SCREENS := {
 	"talk": "res://scripts/screens/talk.gd",
 	"gallery": "res://scripts/screens/gallery.gd",
 	"chars": "res://scripts/screens/chars.gd",
+	"codex": "res://scripts/screens/codex.gd",
 	"assets": "res://scripts/screens/assets.gd",
 }
 
 var screen: Node
 var screen_name := ""
 var _fade: ColorRect
+var _cl: CanvasLayer
+var _toasts := 0
+
+## 屏幕顶部的提示条（成就达成等）
+func toast(text: String) -> void:
+	var bg := ColorRect.new()
+	bg.color = Color(0.2, 0.14, 0.34, 0.95)
+	bg.size = Vector2(G.FIELD_W - 20, 20)
+	bg.position = Vector2(10, -24)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cl.add_child(bg)
+	var l := UI.label(bg, text, 4, 12, Color(1, 0.9, 0.6), 0, G.FIELD_W - 20)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.clip_text = true
+	var y := 24.0 + _toasts * 24.0
+	_toasts += 1
+	var tw := bg.create_tween()
+	tw.tween_property(bg, "position:y", y, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(2.4)
+	tw.tween_property(bg, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func():
+		_toasts = maxi(0, _toasts - 1)
+		bg.queue_free())
 
 func _ready() -> void:
 	G.main = self
@@ -33,8 +57,9 @@ func _ready() -> void:
 	_fade.size = Vector2(G.FIELD_W, 2000)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
+	_cl = cl
 	goto("title")
-	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest", "_chartest"]:   # 开发用的自动测试脚本
+	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest", "_chartest", "_metatest"]:   # 开发用的自动测试脚本
 		if OS.get_cmdline_user_args().has("--" + tn.trim_prefix("_")):
 			add_child(load("res://tools/%s.gd" % tn).new())
 
@@ -59,7 +84,7 @@ func goto(name: String, arg := {}) -> void:
 ## 各界面对应的 BGM 槽位（文件放在 assets/music/ 下，缺文件则静音）
 func _pick_bgm(name: String, arg: Dictionary) -> void:
 	match name:
-		"title", "gallery", "assets", "chars":
+		"title", "gallery", "assets", "chars", "codex":
 			Au.bgm("title")
 		"talk":
 			Au.bgm("")
@@ -71,9 +96,9 @@ func _pick_bgm(name: String, arg: Dictionary) -> void:
 		_:
 			Au.bgm("map")
 
-func start_run(ch := "reimu") -> void:
+func start_run(ch := "reimu", asc_lv := 0) -> void:
 	G.clear_run()
-	G.new_run(ch)
+	G.new_run(ch, asc_lv)
 	G.meta.runs += 1
 	G.save_meta()
 	goto("map")

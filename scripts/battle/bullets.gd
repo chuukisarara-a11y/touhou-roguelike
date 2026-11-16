@@ -52,13 +52,18 @@ class Laser:
 		var k := minf(1.0, (t - warn) / 0.12) * minf(1.0, (warn + life - t) / 0.15)
 		return width * k
 
-const RADII := [2.5, 5.0, 2.0, 2.0, 3.0, 3.2, 2.4]
+const RADII := [2.5, 5.0, 2.0, 2.0, 3.0, 3.2, 2.4, 3.2]   # 最后一种是人偶弹
 const ROT_SHAPES := [2, 3, 5, 6]
 const COLORS := [Color(1, 0.3, 0.35), Color(0.35, 0.55, 1), Color(0.35, 0.9, 0.5), Color(1, 0.55, 0.85), Color(0.75, 0.45, 1), Color(0.45, 0.9, 1), Color(0.9, 0.92, 1)]
 const CAP := 1400
 var list := []
 var lasers := []
 var _new := []
+var vanish := []   # 消弹动画：[pos, shape, col, t]
+
+func _van(b: Bullet) -> void:
+	if vanish.size() < 260:
+		vanish.append([b.pos, b.shape, b.col, 0.0])
 var _atlas: Texture2D
 
 func _ready() -> void:
@@ -72,7 +77,7 @@ func _ready() -> void:
 	add_child(glow)
 
 func speed_mult() -> float:
-	return G.DIFF_SPEED * (1.0 + 0.05 * (G.run.get("chapter", 1) - 1))
+	return G.DIFF_SPEED * (1.0 + 0.05 * (G.run.get("chapter", 1) - 1)) * G.asc_speed()
 
 ## 新敌弹：速度会乘上难度系数
 func add(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
@@ -100,6 +105,7 @@ func clear_all(fx: FxLayer = null) -> Array:
 	var pts := []
 	for b in list:
 		pts.append(b.pos)
+		_van(b)
 	if fx != null:
 		for i in range(0, pts.size(), 3):
 			fx.spark(pts[i], Color(0.8, 0.9, 1.0))
@@ -109,8 +115,9 @@ func clear_all(fx: FxLayer = null) -> Array:
 
 func clear_near(pos: Vector2, radius: float, fx: FxLayer) -> void:
 	for b in list:
-		if b.pos.distance_squared_to(pos) < radius * radius:
+		if not b.dead and b.pos.distance_squared_to(pos) < radius * radius:
 			b.dead = true
+			_van(b)
 			fx.spark(b.pos, Color(0.7, 0.95, 1.0))
 
 func tick(dt: float, battle) -> void:
@@ -120,6 +127,10 @@ func tick(dt: float, battle) -> void:
 	var pp: Vector2 = battle.player.position
 	var graze_r: float = battle.graze_radius()
 	var alive: bool = battle.state == "play"
+	var inv: bool = battle.player.invuln > 0.0
+	for v in vanish:
+		v[3] += dt
+	vanish = vanish.filter(func(v): return v[3] < 0.25)
 	for b in list:
 		if b.dead:
 			continue
@@ -169,7 +180,11 @@ func tick(dt: float, battle) -> void:
 			continue
 		var d2: float = b.pos.distance_squared_to(pp)
 		var hr: float = b.r + Player.HIT_RADIUS
-		if d2 < hr * hr:
+		if inv:   # 无敌期间：碰到自机的子弹被擦掉
+			if d2 < (b.r + 9.0) * (b.r + 9.0):
+				b.dead = true
+				_van(b)
+		elif d2 < hr * hr:
 			b.dead = true
 			battle.player_hit()
 		elif not b.grazed and d2 < (b.r + graze_r) * (b.r + graze_r):
@@ -236,6 +251,10 @@ func _draw() -> void:
 			var w: float = l.cur_w()
 			draw_line(l.o, end, Color(c.r, c.g, c.b, 0.85), w)
 			draw_line(l.o, end, Color(1, 1, 1, 0.95), w * 0.45)
+	for v in vanish:
+		var vk: float = v[3] / 0.25
+		var vs := 16.0 * (1.0 + vk * 1.6)
+		draw_texture_rect_region(_atlas, Rect2(v[0] - Vector2(vs, vs) / 2.0, Vector2(vs, vs)), Rect2(v[2] * 32, v[1] * 32, 32, 32), Color(1, 1, 1, 0.8 * (1.0 - vk)))
 	for b in list:
 		if b.delay > 0.0 and b.age < b.delay:
 			pass

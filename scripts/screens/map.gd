@@ -23,7 +23,15 @@ func _ready() -> void:
 	h = G.field_h()
 	UI.backdrop(self)
 	UI.status(self)
-	var cl := UI.label(self, G.chap(G.run.chapter).name, 3, 12, Color(0.85, 0.8, 1.0), 52, 84)
+	if G.run.money >= 500:
+		G.ach("rich")
+	if G.run.skills.size() >= 6:
+		G.ach("skills6")
+	if G.run.weapons.filter(func(w): return w.lv >= 3).size() >= 4:
+		G.ach("allmax")
+	if G.run.shards >= 3:
+		G.ach("shards3")
+	var cl := UI.label(self, G.chap(G.run.chapter).name + ("　异变%d" % G.asc() if G.asc() > 0 else ""), 3, 12, Color(0.85, 0.8, 1.0), 52, 84)
 	cl.size.y = 0
 	UI.fit(cl, 14.0)
 	var ex := []

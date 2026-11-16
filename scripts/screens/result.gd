@@ -9,6 +9,20 @@ func setup(arg: Dictionary) -> void:
 	true_end = arg.get("true_end", false)
 	if win and not G.bot:
 		G.meta.wins += 1
+		var ch: String = G.run.char
+		if G.asc() >= G.meta.asc.get(ch, 0):   # 解锁下一级异变
+			G.meta.asc[ch] = mini(10, G.asc() + 1)
+		G.ach("first_win")
+		if true_end:
+			G.ach("true_end")
+		if ch == "marisa":
+			G.ach("marisa_win")
+		if G.asc() >= 1:
+			G.ach("asc1")
+		if G.asc() >= 5:
+			G.ach("asc5")
+		if G.asc() >= 10:
+			G.ach("asc10")
 		G.save_meta()
 
 func _ready() -> void:

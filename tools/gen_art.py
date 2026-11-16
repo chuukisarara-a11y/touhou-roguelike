@@ -439,7 +439,7 @@ small("coin", 8, 8, b_coin)
 # ------------------------------------------------------------------ 敌弹图集（每格 16 单位）
 # 行 = 形状：0小圆 1大圆 2米粒 3小刀 4星弹 5蝴蝶 6札弹；列 = 颜色：0红 1蓝 2绿 3粉 4紫 5青 6白
 COLS = [(240, 60, 70), (70, 120, 250), (70, 210, 100), (255, 130, 200), (175, 90, 245), (90, 220, 240), (225, 228, 240)]
-atlas = Dr(16 * len(COLS), 16 * 7, S)
+atlas = Dr(16 * len(COLS), 16 * 8, S)
 for i, c in enumerate(COLS):
     ox = i * 16 + 8
     dk = dark(c, 0.5)
@@ -470,6 +470,13 @@ for i, c in enumerate(COLS):
     # 札弹
     atlas.rect(ox - 2.6, 98.6, ox + 2.6, 109.4, dk); atlas.rect(ox - 2.0, 99.2, ox + 2.0, 108.8, WHITE)
     atlas.rect(ox - 2.0, 99.2, ox + 2.0, 100.6, c); atlas.rect(ox - 2.0, 107.4, ox + 2.0, 108.8, c); atlas.rect(ox - 0.6, 101.8, ox + 0.6, 106.2, c)
+for i, c in enumerate(COLS):   # 第 7 行：人偶弹
+    ox = i * 16 + 8
+    dk = dark(c, 0.5)
+    atlas.poly([(ox, 117.5), (ox + 5.4, 126.4), (ox - 5.4, 126.4)], dk)
+    atlas.poly([(ox, 118.6), (ox + 4.2, 125.6), (ox - 4.2, 125.6)], c)
+    atlas.ell(ox, 116.6, 3.9, 3.9, dk); atlas.ell(ox, 116.6, 3.1, 3.1, (255, 236, 214)); atlas.ell(ox, 115.2, 3.1, 1.9, c)
+    atlas.ell(ox - 1.2, 117.2, 0.5, 0.7, K); atlas.ell(ox + 1.2, 117.2, 0.5, 0.7, K)
 atlas.save("bullets")
 # 使魔（护盾型敌人的护卫）
 def b_fam(d):

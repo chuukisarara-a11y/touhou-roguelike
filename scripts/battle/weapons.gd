@@ -49,11 +49,15 @@ static func _fire(w: Dictionary, p: Player, b) -> float:
 			var d2 := 3.4 * m * line * (1.4 if lv >= 2 else 1.0) * (1.6 if lv >= 3 else 1.0)
 			p.laser_w = lw
 			p.laser_t = 0.16
+			p.laser_offs = [-7.0, 7.0] if G.run.char == "marisa" else [0.0]   # 魔理沙是两道
 			for e in b.enemies.list:
-				if not e.dead and e.pos.y < pos.y and absf(e.pos.x - pos.x) < lw / 2 + e.radius:
-					e.hurt(d2, b)
-					if randf() < 0.3:
-						b.fx.spark(Vector2(pos.x, e.pos.y + e.radius), Color(0.7, 0.95, 1))
+				if e.dead or e.pos.y >= pos.y:
+					continue
+				for off0 in p.laser_offs:
+					if absf(e.pos.x - pos.x - off0) < lw / 2 + e.radius:
+						e.hurt(d2, b)
+						if randf() < 0.3:
+							b.fx.spark(Vector2(pos.x + off0, e.pos.y + e.radius), Color(0.7, 0.95, 1))
 			return 0.1
 		"yinyang":
 			for o in p.orbs:

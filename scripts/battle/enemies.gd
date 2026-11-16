@@ -74,6 +74,12 @@ class Enemy:
 		pause = 1.2
 		burn_t = 0.0
 
+	## 有名字的符卡限时（秒）；没名字的普通攻击不限时
+	func time_limit() -> float:
+		if phases[phase_i].name == "":
+			return 0.0
+		return phases[phase_i].get("time", 45.0)
+
 	func phase_name() -> String:
 		return phases[phase_i].name
 
@@ -102,7 +108,7 @@ func spawn(kind: String, move: Dictionary, hp_mult: float, opts := {}) -> Enemy:
 	e.split_lv = opts.get("split_lv", 2 if e.mech == "split" else 0)
 	e.scale = opts.get("scale", d.get("scale", 1.0))
 	e.radius *= e.scale / d.get("scale", 1.0)
-	e.max_hp = d.hp * hp_mult * G.DIFF_HP * opts.get("hp_k", 1.0); e.hp = e.max_hp
+	e.max_hp = d.hp * hp_mult * G.DIFF_HP * G.asc_hp() * opts.get("hp_k", 1.0); e.hp = e.max_hp
 	match move.type:
 		"hover", "mirror":
 			e.pos = Vector2(move.tx + randf_range(-20, 20), -12)
@@ -130,7 +136,7 @@ func spawn_boss(bid: String, hp_mult: float) -> Enemy:
 	e.id = _next_id; _next_id += 1
 	e.kind = bid; e.def = d; e.is_boss = true
 	e.radius = d.r; e.coins = d.coins
-	e.phases = d.phases; e.hp_mult = hp_mult * G.DIFF_BOSS_HP
+	e.phases = d.phases; e.hp_mult = hp_mult * G.DIFF_BOSS_HP * G.asc_hp() * (1.25 if G.asc() >= 7 else 1.0)
 	e.pos = Vector2(G.FIELD_W / 2, -20)
 	e.target = Vector2(G.FIELD_W / 2, 62)
 	e.load_phase()
@@ -248,7 +254,7 @@ func _tick_mob(e: Enemy, dt: float, h: float, battle) -> void:
 	if can_shoot and e.def.atk != "":
 		e.atk_t -= dt
 		if e.atk_t <= 0.0:
-			e.atk_t = e.def.cd / G.DIFF_RATE * randf_range(0.85, 1.15)
+			e.atk_t = e.def.cd / (G.DIFF_RATE * G.asc_rate()) * randf_range(0.85, 1.15)
 			Pat.enemy_attack(e, battle)
 
 func _tick_boss(e: Enemy, dt: float, battle) -> void:
@@ -259,6 +265,10 @@ func _tick_boss(e: Enemy, dt: float, battle) -> void:
 	if Pat.every(e, "_mv", 3.6, dt):
 		e.target = Vector2(randf_range(45, G.FIELD_W - 45), randf_range(48, 82))
 	e.pt += dt
+	var lim: float = e.time_limit()
+	if lim > 0.0 and e.pt >= lim and battle.state == "play":
+		battle.on_spell_timeout(e)
+		return
 	Pat.boss(e, e.phases[e.phase_i].pat, dt, battle)
 
 func _draw() -> void:

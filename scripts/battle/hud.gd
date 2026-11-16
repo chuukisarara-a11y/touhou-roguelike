@@ -44,6 +44,10 @@ func _draw() -> void:
 		var w := G.FIELD_W - 16.0
 		draw_rect(Rect2(8, 20, w, 4), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(8, 20, w * clampf(boss.hp / boss.max_hp, 0, 1), 4), Color(1, 0.4, 0.5))
+		var lim: float = boss.time_limit()
+		if lim > 0.0 and boss.pause <= 0.0:
+			var left := maxf(0.0, lim - boss.pt)
+			draw_string(f, Vector2(G.FIELD_W - 26, 54), "%02d" % int(ceilf(left)), HORIZONTAL_ALIGNMENT_RIGHT, 20, 12, Color(1, 0.4, 0.4) if left < 10.0 else Color(1, 1, 1, 0.85))
 		for i in boss.phases.size() - boss.phase_i - 1:
 			draw_rect(Rect2(8 + i * 6, 26, 4, 3), Color(1, 0.8, 0.85))
 		draw_string(f, Vector2(0, 40), boss.def.name + ("  " + boss.phase_name() if boss.phase_name() != "" else ""), HORIZONTAL_ALIGNMENT_CENTER, G.FIELD_W, 12, Color(1, 0.95, 1, 0.9))

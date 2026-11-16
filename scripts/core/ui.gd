@@ -197,8 +197,8 @@ class Overlay extends CanvasLayer:
 	var y := 0.0
 	var _h := 356.0
 	func _init(title: String, height := 220.0) -> void:
-		layer = 20
 		add_to_group("overlay")
+		layer = 20
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		_h = G.field_h()
 		var dim := ColorRect.new()
@@ -224,6 +224,13 @@ class Overlay extends CanvasLayer:
 		if title != "":
 			UI.label(panel, title, y, 12, Color(1, 0.85, 0.55))
 			y += 22.0
+	## 后打开的弹出层盖在先打开的上面（行囊 → 物品详情）
+	func _enter_tree() -> void:
+		var top := 19
+		for o in get_tree().get_nodes_in_group("overlay"):
+			if o != self and not o.is_queued_for_deletion():
+				top = maxi(top, o.layer)
+		layer = top + 1
 	## 弹出层打开时，触摸不再传给下面的界面（地图、对话等用 _unhandled_input 的界面）
 	func _unhandled_input(ev: InputEvent) -> void:
 		if ev is InputEventScreenTouch or ev is InputEventScreenDrag or ev is InputEventMouseButton:
@@ -242,6 +249,28 @@ class Overlay extends CanvasLayer:
 		return b
 	func close() -> void:
 		queue_free()
+
+## 游戏说明：一页一页翻。done 在看完（或关掉）后调用
+static func tutorial(parent: Node, page := 0, done := Callable()) -> void:
+	var t: Array = Db.TUTORIAL[page]
+	var hh := text_h(t[1], G.FIELD_W - 24.0, 12) + 96.0
+	var ov := Overlay.new("%s（%d / %d）" % [t[0], page + 1, Db.TUTORIAL.size()], hh)
+	parent.add_child(ov)
+	var l := ov.add_label(t[1])
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var last := page == Db.TUTORIAL.size() - 1
+	ov.add_button("知道了" if last else "下一页", func():
+		ov.close()
+		if last:
+			if done.is_valid():
+				done.call()
+		else:
+			tutorial(parent, page + 1, done))
+	if not last:
+		ov.add_button("跳过", func():
+			ov.close()
+			if done.is_valid():
+				done.call(), 20.0)
 
 ## 「◀ 数值 ▶」式的调节行
 static func stepper(ov: Overlay, label: String, get_v: Callable, set_v: Callable, lo: int, hi: int) -> void:

@@ -75,7 +75,7 @@ func _show_relics(y: float) -> void:
 func _show_cards(y: float) -> void:
 	_nodes.append(UI.label(self, "选择一张符札", y, 12, Color(0.85, 0.8, 1.0)))
 	y += 18
-	for c in G.roll_cards(4 if G.has("lucky") else 3):
+	for c in G.roll_cards((4 if G.has("lucky") else 3) - (1 if G.asc() >= 8 else 0)):
 		var cb := func():
 			G.apply_card(c)
 			G.main.node_done()

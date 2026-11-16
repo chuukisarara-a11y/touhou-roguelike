@@ -23,7 +23,7 @@ var _tex := {}
 const META_PATH := "user://meta.dat"
 const RUN_PATH := "user://run.dat"
 const DEV_PASS := "gensokyo"   # 开发者模式口令（标题画面点月亮输入）
-var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "chars": {"reimu": true}, "dev_char": "reimu", "dev": false, "runs": 0, "wins": 0}
+var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "seen": {"reimu": true}, "chars": {"reimu": true}, "dev_char": "reimu", "asc": {}, "ach": {}, "codex": {}, "spells": {}, "kills": 0, "caps": 0, "tut": false, "dev": false, "runs": 0, "wins": 0}
 var dev_god := false     # 开发者：无敌
 var combo := 0           # 当前擦弹连击（战斗里实时更新，供伤害计算用）
 var focus_on := false    # 专注状态（缓慢移动或静止）
@@ -120,7 +120,7 @@ func load_run() -> bool:
 		return false
 	run = d.run
 	# 旧存档补上新版本才有的字段
-	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0], ["skills", []], ["max_skills", 6], ["char", "reimu"]]:
+	for k in [["sh", [false, false, false]], ["grazes_ch", 0], ["seen_ev", []], ["shards", 0], ["skills", []], ["max_skills", 6], ["char", "reimu"], ["asc", 0]]:
 		if not run.has(k[0]):
 			run[k[0]] = k[1]
 	for r in run.relics.duplicate():   # 旧版本里算宝具、现在是秘符的，挪过去
@@ -136,10 +136,11 @@ func clear_run() -> void:
 
 # ---------- 本局状态 ----------
 
-func new_run(ch := "reimu") -> void:
+func new_run(ch := "reimu", asc_lv := 0) -> void:
 	var cd: Dictionary = Db.CHARS[ch]
+	var hp: int = cd.hearts - (1 if asc_lv >= 3 else 0)
 	run = {
-		"char": ch, "hearts": cd.hearts, "max_hearts": cd.hearts, "money": 0, "bomb": 1.0,
+		"char": ch, "asc": asc_lv, "hearts": hp, "max_hearts": hp, "money": 0, "bomb": 0.0 if asc_lv >= 10 else 1.0,
 		"weapons": [{"id": cd.start, "lv": 1, "cd": 0.0}], "relics": [],
 		"chapter": 1, "floor": 0, "pos": -1, "map": [],
 		"kills": 0, "battles": 0, "revived": false, "tea_kills": 0, "onigiri": 0,
@@ -148,6 +149,36 @@ func new_run(ch := "reimu") -> void:
 		"grazes_ch": 0, "seen_ev": [], "skills": [], "max_skills": 6,
 	}
 	run.map = MapGen.generate(1)
+	codex(cd.start)
+
+# ---------- 异变等级 / 成就 / 图鉴 ----------
+func asc() -> int:
+	return run.get("asc", 0)
+
+func asc_speed() -> float:
+	return (1.08 if asc() >= 1 else 1.0) * (1.08 if asc() >= 9 else 1.0)
+
+func asc_hp() -> float:
+	return 1.15 if asc() >= 2 else 1.0
+
+func asc_rate() -> float:
+	return 1.15 if asc() >= 5 else 1.0
+
+## 达成成就（已达成过的不会重复提示）
+func ach(id: String) -> void:
+	if meta.ach.get(id, false) or bot:
+		return
+	meta.ach[id] = true
+	save_meta()
+	if main != null:
+		main.toast("成就达成：" + Db.ACH[id][0])
+		Au.sfx("win", -4.0)
+
+## 记入图鉴
+func codex(id: String) -> void:
+	if not meta.codex.get(id, false):
+		meta.codex[id] = true
+		save_meta()
 
 ## 当前角色的定义
 func cdef() -> Dictionary:
@@ -202,6 +233,9 @@ func add_skill(id: String) -> void:
 	if id == "" or has(id):
 		return
 	run.skills.append(id)
+	codex(id)
+	if Db.SKILLS[id].rar == 2:
+		ach("epic")
 	if id == "m_power":
 		run.max_weapons = maxi(1, run.max_weapons - 1)
 	if id == "razor":
@@ -209,7 +243,7 @@ func add_skill(id: String) -> void:
 		run.hearts = mini(run.hearts, 2)
 
 func weapon(id: String):
-	for w in run.weapons:
+	for w in run.get("weapons", []):
 		if w.id == id:
 			return w
 	return null
@@ -297,6 +331,9 @@ func add_relic(id: String) -> void:
 	if id == "" or has(id):
 		return
 	run.relics.append(id)
+	codex(id)
+	if Db.RELICS.has(id) and Db.RELICS[id].rar == 2:
+		ach("epic")
 	if id == "charm":
 		run.max_hearts += 1
 		run.hearts += 1
@@ -389,6 +426,7 @@ func apply_card(c: Dictionary) -> void:
 	match c.kind:
 		"new":
 			run.weapons.append({"id": c.id, "lv": 1, "cd": 0.0})
+			codex(c.id)
 		"up":
 			weapon(c.id).lv += 1
 		"skill":

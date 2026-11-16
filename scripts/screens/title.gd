@@ -20,15 +20,19 @@ func _ready() -> void:
 	if G.has_save():
 		items.append(["继续游戏", func(): G.main.continue_run()])
 	items.append(["新游戏", _new_game])
-	items.append(["设置", func(): UI.open_settings(self)])
-	items.append(["立绘鉴赏", func(): G.main.goto("gallery")])
 	if G.meta.dev:
 		items.append(["开发者菜单", func(): Dev.open(self)])
-	var y := maxf(top + 218, h - 22 - items.size() * 27)
+	var y := maxf(top + 216, h - 20 - (items.size() + 2) * 26)
 	for it in items:
-		UI.button(self, it[0], y, it[1], 24.0)
-		y += 27
-	UI.label(self, "东方Project 同人作品　v0.12 开发版", h - 16, 12, Color(0.55, 0.53, 0.7))
+		UI.button(self, it[0], y, it[1], 23.0)
+		y += 26
+	var hw := (G.FIELD_W - 20) / 2.0   # 两列的小按钮
+	UI.button(self, "图鉴·成就", y, func(): G.main.goto("codex"), 23.0, false, {}, 8.0, hw)
+	UI.button(self, "立绘鉴赏", y, func(): G.main.goto("gallery"), 23.0, false, {}, 12.0 + hw, hw)
+	y += 26
+	UI.button(self, "游戏说明", y, func(): UI.tutorial(self), 23.0, false, {}, 8.0, hw)
+	UI.button(self, "设置", y, func(): UI.open_settings(self), 23.0, false, {}, 12.0 + hw, hw)
+	UI.label(self, "东方Project 同人作品　v0.13", h - 16, 12, Color(0.55, 0.53, 0.7))
 
 func _new_game() -> void:
 	if G.has_save():

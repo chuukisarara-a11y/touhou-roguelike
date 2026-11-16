@@ -37,7 +37,7 @@ func _add(t: int, card: Array, name: String, desc: String, price: int, buy: Call
 	return it
 
 func _stock() -> void:
-	var disc := 0.7 if G.has("member") else 1.0
+	var disc := (0.7 if G.has("member") else 1.0) * (1.2 if G.asc() >= 4 else 1.0)
 	var run: Dictionary = G.run
 	# 符札
 	for c in G.roll_cards(3):
