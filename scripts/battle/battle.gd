@@ -109,7 +109,7 @@ func _process(real_dt: float) -> void:
 	banner_t -= real_dt
 	if shake > 0.0:
 		shake -= real_dt
-		position = Vector2(randf_range(-2, 2), randf_range(-2, 2)).round() if shake > 0.0 else Vector2.ZERO
+		position = Vector2(randf_range(-2, 2), randf_range(-2, 2)) if shake > 0.0 else Vector2.ZERO
 	hud.tick()
 	if state != "play":
 		end_t -= real_dt
@@ -130,7 +130,7 @@ func _tick_waves(dt: float) -> void:
 		var s: Dictionary = pending.pop_front()
 		if s.has("boss"):
 			boss = enemies.spawn_boss(s.boss, hp_mult)
-			hud.cutin(Db.BOSSES[s.boss].tex + ("_0" if Db.BOSSES[s.boss].get("anim", false) else ""))
+			hud.cutin("p_" + Db.BOSSES[s.boss].tex)
 		else:
 			enemies.spawn(s.kind, s.move, hp_mult)
 	if pending.is_empty() and enemies.alive() == 0:
@@ -177,7 +177,7 @@ func on_enemy_killed(e) -> void:
 			fx.text(player.position + Vector2(0, -14), "+1 心", Color(1, 0.5, 0.6))
 
 func on_boss_phase(e) -> void:
-	hud.cutin(e.def.tex + ("_0" if e.def.get("anim", false) else ""))
+	hud.cutin("p_" + e.def.tex)
 	bullets.clear_all(fx)
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
 	items.drop_coins(e.pos, 8)

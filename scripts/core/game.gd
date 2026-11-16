@@ -3,6 +3,13 @@ extends Node
 
 const FIELD_W := 200.0
 const MAX_WEAPONS := 4
+const TEX_SCALE := 2
+const CHAR_TEX := ["reimu", "fairy_0", "fairy_1", "fairy_red_0", "fairy_red_1", "bigfairy_0", "bigfairy_1", "rumia", "daiyousei_0", "daiyousei_1", "cirno_0", "cirno_1", "nitori", "rinnosuke"]
+# 难度系数（v0.4：整体压力约 +50%）
+const DIFF_SPEED := 1.25    # 敌弹速度
+const DIFF_RATE := 1.3      # 敌人射击频率
+const DIFF_HP := 1.2        # 杂鱼血量
+const DIFF_BOSS_HP := 1.25  # 精英/Boss 血量
 
 var touch_mode := false  # 手机/平板为 true（决定是否启用松手慢动作）
 var bot := false         # 自动测试模式
@@ -35,10 +42,20 @@ func _add_keys(action: String, keys: Array) -> void:
 func field_h() -> float:
 	return get_viewport().get_visible_rect().size.y
 
-func tex(n: String) -> Texture2D:
-	if not _tex.has(n):
-		_tex[n] = load("res://assets/sprites/%s.png" % n)
-	return _tex[n]
+## 贴图按 2 倍像素密度绘制：加载后把显示尺寸设为一半，逻辑坐标不变。
+## raw=true 时不改尺寸（图集按真实像素取区域时用）。
+func tex(n: String, raw := false) -> Texture2D:
+	var key := n + ("#raw" if raw else "")
+	if not _tex.has(key):
+		var src: Texture2D = load("res://assets/sprites/%s.png" % n)
+		if raw:
+			_tex[key] = src
+		else:
+			var it := ImageTexture.create_from_image(src.get_image())
+			var sc := 4 if CHAR_TEX.has(n) else TEX_SCALE   # 角色贴图是 4 倍密度
+			it.set_size_override(Vector2i(src.get_width() / sc, src.get_height() / sc))
+			_tex[key] = it
+	return _tex[key]
 
 # ---------- 本局状态 ----------
 

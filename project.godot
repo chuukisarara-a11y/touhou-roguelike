@@ -17,7 +17,7 @@ window/size/viewport_width=200
 window/size/viewport_height=356
 window/size/window_width_override=500
 window/size/window_height_override=890
-window/stretch/mode="viewport"
+window/stretch/mode="canvas_items"
 window/stretch/aspect="keep_width"
 window/handheld/orientation=1
 
@@ -33,5 +33,4 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
 textures/canvas_textures/default_texture_filter=0
-2d/snap/snap_2d_transforms_to_pixel=true
 environment/defaults/default_clear_color=Color(0.05, 0.04, 0.1, 1)

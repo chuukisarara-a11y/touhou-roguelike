@@ -14,16 +14,15 @@ class Bullet:
 	var tag := ""
 
 const RADII := [2.5, 5.0, 2.0]
-const SPEED_MULT := 1.1   # 全局弹速系数（难度微调用）
 var list := []
 var _atlas: Texture2D
 
 func _ready() -> void:
-	_atlas = G.tex("bullets")
+	_atlas = G.tex("bullets", true)
 
 func add(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
 	var b := Bullet.new()
-	b.pos = pos; b.vel = vel * SPEED_MULT; b.shape = shape; b.col = col; b.tag = tag
+	b.pos = pos; b.vel = vel * G.DIFF_SPEED; b.shape = shape; b.col = col; b.tag = tag
 	b.r = RADII[shape]
 	if list.size() < 700:
 		list.append(b)
@@ -71,10 +70,10 @@ func tick(dt: float, battle) -> void:
 
 func _draw() -> void:
 	for b in list:
-		var src := Rect2(b.col * 16, b.shape * 16, 16, 16)
+		var src := Rect2(b.col * 32, b.shape * 32, 32, 32)
 		if b.shape == 2:
-			draw_set_transform(b.pos.round(), b.vel.angle() + PI / 2.0, Vector2.ONE)
+			draw_set_transform(b.pos, b.vel.angle() + PI / 2.0, Vector2.ONE)
 			draw_texture_rect_region(_atlas, Rect2(-8, -8, 16, 16), src)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
-			draw_texture_rect_region(_atlas, Rect2((b.pos - Vector2(8, 8)).round(), Vector2(16, 16)), src)
+			draw_texture_rect_region(_atlas, Rect2((b.pos - Vector2(8, 8)), Vector2(16, 16)), src)

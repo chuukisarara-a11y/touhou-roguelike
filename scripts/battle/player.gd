@@ -77,13 +77,13 @@ func tick(dt: float, real_dt: float, battle) -> void:
 		_sprite.visible = int(_t * 20.0) % 2 == 0
 	else:
 		_sprite.visible = true
-	_sprite.position.y = roundf(sin(_t * 4.0))
+	_sprite.position.y = sin(_t * 4.0)
 	queue_redraw()
 
 func _draw() -> void:
 	var yt := G.tex("yinyang")
 	for o in orbs:
-		draw_texture(yt, (o[0] - position - yt.get_size() / 2.0).round())
+		draw_texture(yt, (o[0] - position - yt.get_size() / 2.0))
 	var dt_ := G.tex("doll")
 	for d in dolls:
-		draw_texture(dt_, (d - position - dt_.get_size() / 2.0).round())
+		draw_texture(dt_, (d - position - dt_.get_size() / 2.0))

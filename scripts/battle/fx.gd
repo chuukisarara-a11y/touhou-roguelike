@@ -37,7 +37,7 @@ func tick(dt: float) -> void:
 
 func _draw() -> void:
 	for s in sparks:
-		draw_rect(Rect2(s[0].round(), Vector2(2, 2)), s[3])
+		draw_rect(Rect2(s[0], Vector2(2, 2)), s[3])
 	for r in rings:
 		var k: float = r[1] / 0.3
 		var c: Color = r[3]
@@ -46,4 +46,4 @@ func _draw() -> void:
 	for x in texts:
 		var c2: Color = x[3]
 		c2.a = minf(1.0, x[2] * 2.0)
-		draw_string(G.font, (x[0] + Vector2(-40, 0)).round(), x[1], HORIZONTAL_ALIGNMENT_CENTER, 80, 12, c2)
+		draw_string(G.font, (x[0] + Vector2(-40, 0)), x[1], HORIZONTAL_ALIGNMENT_CENTER, 80, 12, c2)

@@ -16,6 +16,8 @@ static func ring(b, pos: Vector2, n: int, speed: float, offset := 0.0, shape := 
 		b.bullets.add(pos, Vector2.from_angle(offset + TAU * i / n) * speed, shape, col)
 
 static func every(e, key: String, iv: float, dt: float) -> bool:
+	if not key.begins_with("_"):
+		iv /= G.DIFF_RATE
 	var v: float = e.tm.get(key, iv * 0.6) - dt
 	if v <= 0.0:
 		e.tm[key] = v + iv

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://7uoe5kyrom5f"
-path="res://.godot/imported/fairy_red.png-a4a505bf74a96d0489ca14bcebef5585.ctex"
+uid="uid://dknsrrs0fbolx"
+path="res://.godot/imported/p_cirno.png-e29b1d5d986bec72a82dcb610c94144e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/fairy_red.png"
-dest_files=["res://.godot/imported/fairy_red.png-a4a505bf74a96d0489ca14bcebef5585.ctex"]
+source_file="res://assets/sprites/p_cirno.png"
+dest_files=["res://.godot/imported/p_cirno.png-e29b1d5d986bec72a82dcb610c94144e.ctex"]
 
 [params]
 

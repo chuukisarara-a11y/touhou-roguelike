@@ -1,262 +1,276 @@
 #!/usr/bin/env python3
-"""生成全部像素美术：角色、敌人、子弹、图标、背景、事件插画、应用图标。
+"""生成全部美术（2 倍像素密度）：角色、立绘、敌人、子弹、图标、背景、事件插画、应用图标。
+游戏逻辑坐标 1 单位 = 这里的 2 像素；游戏加载贴图时按一半尺寸显示。
 用法: python3 tools/gen_art.py   （输出到 assets/sprites/ 与 assets/icon.png）"""
 import os, random, math
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 OUT = os.path.join(ROOT, "assets", "sprites")
 os.makedirs(OUT, exist_ok=True)
-K = (30, 20, 44, 255)          # 描边色
-SKIN = (252, 222, 196, 255)
-SKIN_D = (226, 170, 150, 255)
+S = 2                           # 像素密度
+K = (38, 26, 52, 255)           # 描边色
+SKIN = (255, 228, 205, 255)
+SKIN_D = (236, 184, 164, 255)
+RED = (222, 60, 70); WHITE = (252, 250, 244); BLUE = (84, 132, 232); YEL = (252, 212, 84)
 
-def rgba(c, a=255):
-    return (c[0], c[1], c[2], a if len(c) < 4 else c[3])
-def dark(c, k=0.68):
-    return (int(c[0] * k), int(c[1] * k), int(c[2] * k), 255)
+def rgba(c):
+    return (c[0], c[1], c[2], c[3] if len(c) > 3 else 255)
+def dark(c, k=0.7):
+    return (int(c[0] * k), int(c[1] * k * 0.96), int(min(255, c[2] * k * 1.06)), 255)
 def light(c, k=0.35):
     return (int(c[0] + (255 - c[0]) * k), int(c[1] + (255 - c[1]) * k), int(c[2] + (255 - c[2]) * k), 255)
 
-class Cv:
-    def __init__(s, w, h):
-        s.w, s.h = w, h
-        s.im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    def px(s, x, y, c):
-        x, y = int(x), int(y)
-        if 0 <= x < s.w and 0 <= y < s.h:
-            s.im.putpixel((x, y), rgba(c))
-    def rect(s, x0, y0, x1, y1, c):
-        for y in range(int(y0), int(y1) + 1):
-            for x in range(int(x0), int(x1) + 1):
-                s.px(x, y, c)
+class Dr:
+    """按比例 k 作画的画布：坐标用设计单位，实际像素 = 单位 × k。"""
+    def __init__(s, w, h, k, oy=0):
+        s.k = k; s.oy = oy; s.w = w; s.h = h
+        s.im = Image.new("RGBA", (int(round(w * k)), int(round(h * k))), (0, 0, 0, 0))
+        s.d = ImageDraw.Draw(s.im)
+    def _p(s, x, y):
+        return (x * s.k, (y + s.oy) * s.k)
     def ell(s, cx, cy, rx, ry, c):
-        for y in range(int(cy - ry - 1), int(cy + ry + 2)):
-            for x in range(int(cx - rx - 1), int(cx + rx + 2)):
-                if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.0:
-                    s.px(x, y, c)
-    def get(s, x, y):
-        if 0 <= x < s.w and 0 <= y < s.h:
-            return s.im.getpixel((x, y))
-        return (0, 0, 0, 0)
-    def outline(s, c=K):
-        src = s.im.copy()
-        for y in range(s.h):
-            for x in range(s.w):
-                if src.getpixel((x, y))[3] == 0:
-                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < s.w and 0 <= ny < s.h and src.getpixel((nx, ny))[3] > 200:
-                            s.im.putpixel((x, y), c); break
-    def paste(s, im, x, y, scale=1):
-        if scale != 1:
-            im = im.resize((im.width * scale, im.height * scale), Image.NEAREST)
-        s.im.alpha_composite(im, (int(x), int(y)))
+        x0, y0 = s._p(cx - rx, cy - ry); x1, y1 = s._p(cx + rx, cy + ry)
+        s.d.ellipse([x0, y0, max(x0, x1 - 1), max(y0, y1 - 1)], fill=rgba(c))
+    def poly(s, pts, c):
+        s.d.polygon([s._p(x, y) for x, y in pts], fill=rgba(c))
+    def rect(s, x0, y0, x1, y1, c):
+        a = s._p(x0, y0); b = s._p(x1, y1)
+        s.d.rectangle([a[0], a[1], max(a[0], b[0] - 1), max(a[1], b[1] - 1)], fill=rgba(c))
+    def line(s, pts, c, w=1.0):
+        s.d.line([s._p(x, y) for x, y in pts], fill=rgba(c), width=max(1, int(round(w * s.k))), joint="curve")
+    def px(s, x, y, c):
+        s.rect(x, y, x + 1, y + 1, c)
+    def paste(s, im, x, y):
+        s.im.alpha_composite(im, (int(round(x * s.k)), int(round((y + s.oy) * s.k))))
+        s.d = ImageDraw.Draw(s.im)
     def save(s, name):
         s.im.save(os.path.join(OUT, name + ".png"))
         return s.im
 
-def ascii_img(rows, pal, outline=True):
-    h, w = len(rows), max(len(r) for r in rows)
-    pad = 1 if outline else 0
-    cv = Cv(w + pad * 2, h + pad * 2)
-    for y, row in enumerate(rows):
-        for x, ch in enumerate(row):
-            if ch != ".":
-                cv.px(x + pad, y + pad, pal[ch])
-    if outline:
-        cv.outline()
-    return cv
+def outlined(im, t=1, color=K):
+    a = im.split()[3].point(lambda v: 255 if v > 150 else 0)
+    big = a.filter(ImageFilter.MaxFilter(2 * t + 1))
+    out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    edge = Image.new("RGBA", im.size, color)
+    out.paste(edge, (0, 0), big)
+    out.alpha_composite(im)
+    return out
 
-# ---------------------------------------------------------------- Q版角色模板
-CW, CH = 22, 28   # 画布（含描边与饰品余量）；身体中心 x=10.5
+def mir(pts, m):
+    return pts if m == 1 else [(48 - x, y) for x, y in pts]
+def mx(x, m):
+    return x if m == 1 else 48 - x
 
-def chibi(hair, dress, eye=(90, 60, 50), top=None, sleeve=None, trim=(250, 248, 240), long_hair=False,
-          arms_out=False, robe=False, shoe=(110, 50, 50), frame=0, extra=None, back=None, bangs=1):
-    cv = Cv(CW, CH)
-    ox, oy = 1, 2
-    top = top or dress
-    sleeve = sleeve or top
-    def P(x, y, c): cv.px(x + ox, y + oy, c)
-    def R(x0, y0, x1, y1, c): cv.rect(x0 + ox, y0 + oy, x1 + ox, y1 + oy, c)
-    if back:
-        back(cv, ox, oy, frame)
-    if long_hair:
-        R(3, 9, 4, 17, hair); R(15, 9, 16, 17, hair)
-        R(3, 16, 4, 17, dark(hair)); R(15, 16, 16, 17, dark(hair))
-    # 腿与鞋
-    if not robe:
-        R(7, 22, 8, 23, SKIN); R(11, 22, 12, 23, SKIN)
-        R(6, 24, 8, 24, shoe); R(11, 24, 13, 24, shoe)
+# ------------------------------------------------------------------ Q版角色（参数化，可任意放大成立绘）
+BANGS = {
+    1: [(11, 18, (13, 24.5)), (17, 25, (20.5, 23.5)), (24, 31, (27.5, 23)), (30, 37, (35, 24.5))],
+    2: [(11, 20, (14, 24)), (20, 28, (24, 22.5)), (28, 37, (34, 24))],
+    3: [(11, 17, (12.5, 25)), (16, 24, (21, 22.5)), (23, 32, (26, 23.5)), (31, 37, (35.5, 25))],
+}
+
+def draw_char(sp, k, frame=0):
+    d = Dr(48, 68, k, oy=5)
+    H = sp["hair"]; Hd = dark(H, 0.74); Hl = light(H, 0.4)
+    dress = sp["dress"]; top = sp.get("top", dress); slv = sp.get("sleeve", top)
+    trim = sp.get("trim", WHITE); eye = sp["eye"]; shoe = sp.get("shoe", (120, 56, 60))
+    for fn in sp.get("back", []):
+        fn(d, frame)
+    style = sp.get("style", "short")
+    if style == "long":
+        d.poly([(9, 20), (39, 20), (42.5, 45), (36, 49), (12, 49), (5.5, 45)], Hd)
+    elif style == "bob":
+        d.ell(24, 25, 17, 13.5, Hd)
+    if not sp.get("robe"):
+        d.rect(19, 54, 22.6, 60, SKIN); d.rect(25.4, 54, 29, 60, SKIN)
+        d.rect(21.6, 54, 22.6, 60, SKIN_D); d.rect(28, 54, 29, 60, SKIN_D)
+    d.ell(20.3, 61, 3.7, 2.4, shoe); d.ell(27.7, 61, 3.7, 2.4, shoe)
+    if sp.get("robe"):
+        d.poly([(16, 43), (32, 43), (35.5, 60), (12.5, 60)], dress)
+        d.poly([(28, 43), (32, 43), (35.5, 60), (30.5, 60)], dark(dress, 0.8))
+        d.line([(24, 44), (24, 60)], dark(dress, 0.7), 0.7)
     else:
-        R(6, 24, 8, 24, shoe); R(11, 24, 13, 24, shoe)
-    # 裙/袍
-    if robe:
-        R(6, 17, 13, 23, dress); R(12, 17, 13, 23, dark(dress))
+        d.poly([(16, 43), (32, 43), (39.5, 56), (8.5, 56)], dress)
+        d.poly([(28, 43), (32, 43), (39.5, 56), (32.5, 56)], dark(dress, 0.82))
+        for x in (15.5, 21.5, 27):
+            d.line([(x + (x - 24) * 0.1, 46.5), (x + (x - 24) * 0.42, 53.2)], dark(dress, 0.8), 0.55)
+        d.poly([(9.4, 53.8), (38.6, 53.8), (39.5, 56), (8.5, 56)], trim)
+    d.poly([(17, 35), (31, 35), (32.6, 44.5), (15.4, 44.5)], top)
+    d.poly([(28, 35), (31, 35), (32.6, 44.5), (29.6, 44.5)], dark(top, 0.82))
+    for m in (1, -1):
+        if sp.get("arms_out"):
+            d.poly(mir([(17.5, 35.5), (3.5, 34.8), (3.5, 41), (17.5, 43)], m), slv)
+            d.ell(mx(2.6, m), 38, 2.5, 2.7, SKIN)
+        else:
+            d.poly(mir([(17.2, 35.6), (12, 37.6), (8.4, 46.8), (13.6, 48.6), (17.6, 43)], m), slv)
+            d.poly(mir([(10.2, 45), (8.4, 46.8), (13.6, 48.6), (14.6, 46.4)], m), dark(slv, 0.86))
+            d.ell(mx(10.7, m), 49.6, 2.5, 2.5, SKIN)
+    d.rect(22, 32, 26, 36, SKIN_D)
+    for fn in sp.get("mid", []):
+        fn(d, frame)
+    d.ell(24, 20, 15.6, 14.2, H)
+    d.poly([(9, 22), (12, 30), (15, 33), (9.5, 31)], Hd); d.poly([(39, 22), (36, 30), (33, 33), (38.5, 31)], Hd)
+    d.ell(24, 24, 12, 10.4, SKIN)
+    d.ell(24, 32.6, 6, 1.6, SKIN)
+    d.ell(24, 13.2, 13.6, 6.6, H)
+    for x0, x1, tip in BANGS[sp.get("bangs", 1)]:
+        d.poly([(x0, 13.5), (x1, 13.5), tip], H)
+    for m in (1, -1):
+        d.poly(mir([(8.6, 17), (13.2, 16.5), (12.4, 31.5), (9.6, 30.5)], m), H)
+    d.line([(13, 12.5), (17.5, 9.3), (25, 7.8)], Hl, 1.1)
+    if k >= 3:   # 立绘细节：发丝
+        for pts in ([(15, 9), (13.5, 16)], [(21, 7), (19.5, 15)], [(30, 7.5), (32, 15)], [(35, 11), (36.5, 18)]):
+            d.line(pts, Hd, 0.4)
+    for cx in (18, 30):
+        d.ell(cx, 25.2, 3.0, 4.0, dark(eye, 0.42))
+        d.ell(cx, 25.9, 2.3, 3.1, eye)
+        d.ell(cx, 27.3, 1.7, 1.4, light(eye, 0.5))
+        d.ell(cx - 1.0, 23.7, 1.05, 1.15, WHITE)
+        if k >= 3:
+            d.ell(cx + 1.1, 27.6, 0.5, 0.5, WHITE)
+        d.line([(cx - 3.3, 21.8), (cx + 3.3, 21.6)], K, 0.8)
+    for m in (1, -1):
+        d.ell(mx(13.6, m), 29.2, 2.3, 1.15, (255, 176, 176, 255))
+    d.line([(22.8, 30.8), (24, 31.5), (25.2, 30.8)], (196, 104, 104), 0.6)
+    for fn in sp.get("front", []):
+        fn(d, frame)
+    return outlined(d.im, max(1, int(round(k * 0.55))))
+
+def f_bow(c, y=0):
+    def f(d, fr):
+        for m in (1, -1):
+            d.poly(mir([(23, 5 + y), (8.5, -3 + y), (5.5, 9.5 + y), (21, 10 + y)], m), c)
+            d.poly(mir([(20.5, 6 + y), (10.5, 1.2 + y), (9.5, 8.2 + y)], m), dark(c, 0.76))
+        d.ell(24, 7 + y, 3.4, 3.6, c); d.ell(24.6, 7.6 + y, 1.6, 1.8, dark(c, 0.8))
+    return f
+def f_tubes(d, fr):
+    for m in (1, -1):
+        d.poly(mir([(7.4, 21), (12.2, 21), (12.2, 36), (7.4, 36)], m), RED)
+        d.poly(mir([(7.4, 24.5), (12.2, 24.5), (12.2, 26.6), (7.4, 26.6)], m), WHITE)
+        d.poly(mir([(7.4, 30.5), (12.2, 30.5), (12.2, 32.6), (7.4, 32.6)], m), WHITE)
+def f_collar(c):
+    def f(d, fr):
+        d.poly([(18.4, 35), (29.6, 35), (24, 39.2)], WHITE)
+        d.poly([(22.2, 36.6), (25.8, 36.6), (24, 42.4)], c)
+    return f
+def f_cuffs(c):
+    def f(d, fr):
+        for m in (1, -1):
+            d.line(mir([(9.0, 46.2), (13.8, 47.9)], m), c, 1.0)
+    return f
+def f_wings(c, big=False):
+    def f(d, fr):
+        for m in (1, -1):
+            d.ell(mx(5.5 if big else 7.5, m), 34 + fr * 1.6, 10 if big else 8.2, 7 - fr * 1.6, c + (225,))
+            d.ell(mx(8.5, m), 44.5 - fr, 6.4, 4.2, tuple(dark(c, 0.9)[:3]) + (225,))
+            d.line([(mx(13, m), 37), (mx(3 if big else 5, m), 32 + fr * 1.6)], WHITE, 0.4)
+    return f
+def f_ice(d, fr):
+    for m in (1, -1):
+        for i, (x, y) in enumerate(((5.4, 27), (1.9, 37.5), (6.2, 47.5))):
+            yy = y + (fr * 1.2 if i == 1 else -fr * 0.6)
+            x = mx(x, m)
+            d.poly([(x, yy - 6.4), (x + 3.3, yy), (x, yy + 6.4), (x - 3.3, yy)], (150, 226, 255))
+            d.poly([(x, yy - 3.8), (x + 1.5, yy), (x, yy + 3.8), (x - 1.5, yy)], (238, 252, 255))
+def f_ribbon(c):
+    def f(d, fr):
+        d.poly([(33, 3.5), (41.5, 0.5), (42.5, 9.5), (35, 10.5)], c); d.ell(35.2, 7, 2, 2, dark(c, 0.78))
+    return f
+def f_ponytail_b(H):
+    def f(d, fr):
+        d.ell(4.8, 17, 5.2, 8.4, dark(H, 0.8))
+    return f
+def f_dot(x, y, r, c):
+    def f(d, fr):
+        d.ell(x, y, r, r, c)
+    return f
+def f_cap(c):
+    def f(d, fr):
+        d.poly([(10.5, 9.5), (37.5, 9.5), (34.5, -0.5), (13.5, -0.5)], c)
+        d.poly([(30, -0.5), (34.5, -0.5), (37.5, 9.5), (33, 9.5)], dark(c, 0.82))
+        d.poly([(7.5, 9), (40.5, 9), (40.5, 12.4), (7.5, 12.4)], dark(c, 0.72))
+    return f
+def f_twin(H):
+    def f(d, fr):
+        for m in (1, -1):
+            d.ell(mx(5.6, m), 28, 4.8, 7.8, dark(H, 0.82))
+    return f
+def f_glasses(d, fr):
+    g = (84, 84, 112)
+    for cx in (18, 30):
+        d.line([(cx - 3.8, 21.4), (cx + 3.8, 21.4), (cx + 3.8, 29.4), (cx - 3.8, 29.4), (cx - 3.8, 21.4)], g, 0.6)
+    d.line([(21.8, 24.4), (26.2, 24.4)], g, 0.6)
+def f_flower(d, fr):
+    for i in range(8):
+        a = i / 8 * math.tau
+        d.ell(24 + math.cos(a) * 5, 3 + math.sin(a) * 3.2, 2.6, 2.0, YEL)
+    d.ell(24, 3, 3.2, 2.4, (158, 96, 48))
+
+SPECS = {
+    "reimu": dict(hair=(84, 54, 52), dress=RED, sleeve=WHITE, style="long", eye=(150, 70, 60), mid=[f_collar(YEL)], front=[f_bow(RED), f_tubes, f_cuffs(RED)]),
+    "fairy": dict(hair=(252, 220, 104), dress=BLUE, eye=(70, 110, 190), back=[f_wings((196, 238, 255))], mid=[f_collar(YEL)], style="bob"),
+    "fairy_red": dict(hair=(252, 160, 84), dress=RED, eye=(170, 60, 60), back=[f_wings((255, 226, 208))], mid=[f_collar(WHITE)], style="bob", bangs=3),
+    "bigfairy": dict(hair=(120, 206, 120), dress=(250, 206, 76), eye=(60, 130, 70), back=[f_wings((255, 246, 196), True)], mid=[f_collar(RED)], front=[f_flower], style="long", bangs=2),
+    "rumia": dict(hair=(252, 220, 104), dress=(62, 54, 80), sleeve=WHITE, arms_out=True, eye=(226, 60, 70), mid=[f_collar(RED)], front=[f_ribbon(RED)], shoe=(160, 50, 60), style="bob"),
+    "daiyousei": dict(hair=(100, 206, 132), dress=BLUE, eye=(60, 130, 90), back=[f_wings((228, 250, 238), True), f_ponytail_b((100, 206, 132))], mid=[f_collar(YEL)], front=[f_dot(9.6, 11, 2.3, YEL)], bangs=3),
+    "cirno": dict(hair=(132, 200, 252), dress=BLUE, sleeve=WHITE, eye=(70, 120, 226), back=[f_ice, f_bow((60, 110, 206), 1)], mid=[f_collar(RED)], shoe=(70, 90, 170), style="bob", bangs=2),
+    "nitori": dict(hair=(100, 168, 234), dress=(100, 178, 226), eye=(70, 120, 206), back=[f_twin((100, 168, 234))], mid=[f_collar(WHITE), f_dot(24, 41, 1.7, YEL)], front=[f_cap((100, 178, 120))], shoe=(70, 100, 130)),
+    "rinnosuke": dict(hair=(220, 220, 230), dress=(70, 90, 160), top=(50, 60, 84), robe=True, eye=(200, 170, 80), front=[f_glasses], shoe=(60, 50, 50), bangs=2),
+    "sunny": dict(hair=(252, 198, 104), dress=RED, eye=(70, 130, 206), back=[f_wings((255, 242, 206)), f_twin((252, 198, 104))], mid=[f_collar(WHITE)]),
+    "luna": dict(hair=(252, 238, 160), dress=WHITE, trim=(200, 200, 220), eye=(200, 70, 70), back=[f_wings((232, 232, 255))], mid=[f_collar((60, 54, 70))], front=[f_bow((60, 54, 70))], style="long", bangs=2),
+    "starf": dict(hair=(70, 60, 92), dress=BLUE, eye=(130, 96, 70), back=[f_wings((214, 228, 255))], mid=[f_collar(WHITE)], front=[f_bow(BLUE)], style="long", bangs=3),
+}
+ANIM = {"fairy", "fairy_red", "bigfairy", "daiyousei", "cirno"}
+PORTRAITS = ["reimu", "rumia", "daiyousei", "cirno", "nitori", "rinnosuke"]
+
+def char_img(name, k, frame=0):
+    return draw_char(SPECS[name], k, frame)
+
+for name in SPECS:
+    if name in ("sunny", "luna", "starf"):
+        continue
+    if name in ANIM:
+        for f in range(2):
+            char_img(name, S, f).save(os.path.join(OUT, "%s_%d.png" % (name, f)))
     else:
-        R(6, 17, 13, 17, dress); R(5, 18, 14, 18, dress); R(4, 19, 15, 21, dress)
-        R(13, 18, 14, 18, dark(dress)); R(14, 19, 15, 20, dark(dress))
-        R(4, 21, 15, 21, trim)
-    # 上身
-    R(6, 14, 13, 16, top); R(12, 14, 13, 16, dark(top))
-    R(9, 14, 10, 14, SKIN)
-    # 手臂
-    if arms_out:
-        R(1, 14, 5, 15, sleeve); R(14, 14, 18, 15, sleeve)
-        P(0, 14, SKIN); P(0, 15, SKIN); P(19, 14, SKIN); P(19, 15, SKIN)
-    else:
-        R(4, 14, 5, 17, sleeve); R(14, 14, 15, 17, sleeve)
-        R(4, 18, 5, 18, SKIN); R(14, 18, 15, 18, SKIN)
-    # 头
-    cv.ell(9.5 + ox, 8.2 + oy, 6.3, 5.7, hair)
-    cv.ell(9.5 + ox, 9.8 + oy, 4.9, 3.9, SKIN)
-    R(5, 6, 14, 6, hair)
-    if bangs == 1:
-        for x in (5, 6, 9, 10, 13, 14): P(x, 7, hair)
-    elif bangs == 2:
-        for x in (5, 7, 8, 11, 12, 14): P(x, 7, hair)
-    R(6, 3, 9, 3, light(hair)); P(5, 4, light(hair))
-    # 脸
-    for ex in (6, 12):
-        R(ex, 9, ex + 1, 9, K); R(ex, 10, ex + 1, 11, eye); P(ex, 10, (255, 255, 255))
-    P(5, 12, (250, 170, 170)); P(14, 12, (250, 170, 170))
-    P(9, 12, SKIN_D); P(10, 12, SKIN_D)
-    if extra:
-        extra(cv, ox, oy, frame)
-    cv.outline()
-    return cv
-
-def wings(color=(190, 235, 255), big=False):
-    def f(cv, ox, oy, frame):
-        d = frame
-        rx = 4.2 if big else 3.4
-        for sx in (-1, 1):
-            cx = 9.5 + ox + sx * (9.0 if big else 8.2)
-            cv.ell(cx, 12 + oy + d, rx, 3.6 - d * 0.8, color)
-            cv.ell(cx - sx * 0.5, 17 + oy - d * 0.5, rx - 1.2, 2.4, dark(color, 0.85))
-    return f
-
-def bow(color, y=0):
-    def f(cv, ox, oy, frame):
-        d = dark(color)
-        cv.rect(4 + ox, y + oy - 1, 8 + ox, y + oy + 2, color); cv.rect(11 + ox, y + oy - 1, 15 + ox, y + oy + 2, color)
-        cv.px(4 + ox, y + oy - 1, (0, 0, 0, 0)); cv.px(15 + ox, y + oy - 1, (0, 0, 0, 0))
-        cv.rect(5 + ox, y + oy + 1, 7 + ox, y + oy + 2, d); cv.rect(12 + ox, y + oy + 1, 14 + ox, y + oy + 2, d)
-        cv.rect(9 + ox, y + oy, 10 + ox, y + oy + 2, color)
-    return f
-
-def chain(*fs):
-    def f(cv, ox, oy, frame):
-        for g in fs:
-            g(cv, ox, oy, frame)
-    return f
-
-RED = (220, 52, 60); WHITE = (250, 248, 240); BLUE = (70, 120, 230); YEL = (250, 210, 70)
-
-def reimu_extra(cv, ox, oy, frame):
-    bow(RED, 0)(cv, ox, oy, frame)
-    for sx in (3, 15):
-        cv.rect(sx + ox, 9 + oy, sx + 1 + ox, 13 + oy, RED)
-        cv.rect(sx + ox, 10 + oy, sx + 1 + ox, 10 + oy, WHITE); cv.rect(sx + ox, 12 + oy, sx + 1 + ox, 12 + oy, WHITE)
-    cv.rect(9 + ox, 15 + oy, 10 + ox, 16 + oy, YEL)
-    cv.rect(4 + ox, 17 + oy, 5 + ox, 17 + oy, RED); cv.rect(14 + ox, 17 + oy, 15 + ox, 17 + oy, RED)
-
-def tie(color):
-    def f(cv, ox, oy, frame):
-        cv.rect(7 + ox, 14 + oy, 12 + ox, 14 + oy, WHITE)
-        cv.rect(9 + ox, 15 + oy, 10 + ox, 16 + oy, color)
-    return f
-
-def side_ribbon(color):
-    def f(cv, ox, oy, frame):
-        cv.rect(13 + ox, 2 + oy, 16 + ox, 4 + oy, color); cv.px(14 + ox, 3 + oy, dark(color))
-    return f
-
-def ponytail(hair, ribbon):
-    def f(cv, ox, oy, frame):
-        cv.ell(2.5 + ox, 6 + oy, 2.2, 3.2, hair); cv.rect(3 + ox, 4 + oy, 4 + ox, 5 + oy, ribbon)
-    return f
-
-def ice_wings(cv, ox, oy, frame):
-    c = (170, 235, 255); w = (240, 252, 255)
-    for sx in (-1, 1):
-        for i, (dx, dy) in enumerate(((9, 10), (11, 14), (9, 18))):
-            x = 9.5 + ox + sx * dx; y = dy + oy + (frame if i == 1 else 0)
-            for k in range(-2, 3):
-                ww = 2 - abs(k)
-                cv.rect(x - ww * 0.6, y + k, x + ww * 0.6, y + k, c)
-            cv.px(x, y, w)
-
-def cap(color):
-    def f(cv, ox, oy, frame):
-        cv.rect(4 + ox, 1 + oy, 15 + ox, 4 + oy, color); cv.rect(5 + ox, 0 + oy, 14 + ox, 0 + oy, color)
-        cv.rect(3 + ox, 5 + oy, 16 + ox, 5 + oy, dark(color))
-    return f
-
-def twintails(hair):
-    def f(cv, ox, oy, frame):
-        cv.ell(2.5 + ox, 11 + oy, 1.8, 2.6, hair); cv.ell(16.5 + ox, 11 + oy, 1.8, 2.6, hair)
-    return f
-
-def glasses(cv, ox, oy, frame):
-    cv.rect(5 + ox, 9 + oy, 14 + ox, 9 + oy, (60, 60, 80))
-    cv.px(8 + ox, 10 + oy, (60, 60, 80)); cv.px(11 + ox, 10 + oy, (60, 60, 80))
-
-def flower(cv, ox, oy, frame):
-    cv.ell(9.5 + ox, 1 + oy, 4.2, 2.6, YEL); cv.ell(9.5 + ox, 1 + oy, 1.8, 1.2, (150, 90, 40))
-
-CHARS = {}
-def char(name, frames=1, **kw):
-    for f in range(frames):
-        cv = chibi(frame=f, **kw)
-        cv.save(name if frames == 1 else "%s_%d" % (name, f))
-        if f == 0:
-            CHARS[name] = cv.im
-
-char("reimu", hair=(78, 48, 46), dress=RED, sleeve=WHITE, long_hair=True, extra=reimu_extra, eye=(120, 60, 50))
-char("fairy", 2, hair=(250, 215, 90), dress=BLUE, back=wings(), extra=tie(YEL), eye=(60, 90, 160))
-char("fairy_red", 2, hair=(250, 150, 70), dress=RED, back=wings((255, 220, 200)), extra=tie(WHITE), eye=(150, 50, 50))
-char("bigfairy", 2, hair=(110, 200, 110), dress=(250, 200, 60), back=wings((255, 245, 190), True), extra=chain(flower, tie(RED)), eye=(60, 120, 60), long_hair=True)
-char("rumia", hair=(250, 215, 90), dress=(56, 48, 70), arms_out=True, sleeve=WHITE, extra=chain(tie(RED), side_ribbon(RED)), eye=(220, 50, 60), shoe=(150, 40, 50))
-char("daiyousei", 2, hair=(90, 200, 120), dress=BLUE, back=wings((225, 250, 235), True), extra=chain(ponytail((90, 200, 120), YEL), tie(YEL)), eye=(50, 120, 80))
-char("cirno", 2, hair=(125, 195, 250), dress=BLUE, sleeve=WHITE, back=ice_wings, extra=chain(bow((40, 90, 190), 0), tie(RED)), eye=(60, 110, 220), shoe=(60, 80, 160))
-char("nitori", hair=(90, 160, 230), dress=(90, 170, 220), extra=chain(twintails((90, 160, 230)), cap((90, 170, 110)), tie(YEL)), eye=(60, 110, 200), shoe=(60, 90, 120))
-char("rinnosuke", hair=(215, 215, 225), dress=(60, 80, 150), top=(40, 50, 70), robe=True, extra=glasses, eye=(190, 160, 70), shoe=(50, 40, 40), bangs=2)
-char("sunny", hair=(250, 190, 90), dress=RED, back=wings((255, 240, 200)), extra=chain(twintails((250, 190, 90)), tie(WHITE)), eye=(60, 120, 200))
-char("luna", hair=(250, 235, 150), dress=WHITE, back=wings((230, 230, 255)), extra=chain(bow((50, 45, 60), 0), tie((50, 45, 60))), eye=(190, 60, 60), long_hair=True)
-char("starf", hair=(60, 50, 80), dress=BLUE, back=wings((210, 225, 255)), extra=chain(bow(BLUE, 0), tie(WHITE)), eye=(110, 80, 60), long_hair=True)
+        char_img(name, S).save(os.path.join(OUT, name + ".png"))
+for name in PORTRAITS:   # 立绘：4 倍放大的半身像
+    im = char_img(name, 4)
+    im.crop((0, 0, 192, 208)).save(os.path.join(OUT, "p_%s.png" % name))
 
 # 毛玉（两帧）
+def kedama(k, f):
+    d = Dr(16, 16, k)
+    for i in range(16):
+        a = i / 16 * math.tau + f * 0.2
+        r1 = 7.4 if i % 2 == 0 else 6.2
+        d.poly([(8 + math.cos(a - 0.2) * 4.5, 8 + math.sin(a - 0.2) * 4.5), (8 + math.cos(a) * r1, 8 + math.sin(a) * r1), (8 + math.cos(a + 0.2) * 4.5, 8 + math.sin(a + 0.2) * 4.5)], WHITE)
+    d.ell(8, 8, 5.6, 5.6, WHITE); d.ell(8.8, 9.6, 4, 3.4, (222, 226, 240))
+    d.ell(5.8, 7.4, 0.8, 1.6, K); d.ell(10.2, 7.4, 0.8, 1.6, K)
+    d.line([(6.6, 10.6), (8, 11.3), (9.4, 10.6)], (226, 90, 100), 0.6)
+    return outlined(d.im, 1)
 for f in range(2):
-    cv = Cv(16, 16)
-    rnd = random.Random(3 + f)
-    cv.ell(7.5, 7.5, 5.2, 5.2, WHITE)
-    for i in range(14):
-        a = i / 14 * math.tau + f * 0.22
-        cv.px(7.5 + math.cos(a) * 6.2, 7.5 + math.sin(a) * 6.2, WHITE)
-        cv.px(7.5 + math.cos(a) * 5.4, 7.5 + math.sin(a) * 5.4, WHITE)
-    cv.ell(8.5, 9.5, 3.5, 3.0, (215, 220, 235))
-    cv.rect(5, 6, 5, 8, K); cv.rect(9, 6, 9, 8, K)
-    cv.rect(6, 10, 8, 10, (220, 80, 90))
-    cv.outline()
-    cv.save("kedama_%d" % f)
-    if f == 0: CHARS["kedama"] = cv.im
+    kedama(S, f).save(os.path.join(OUT, "kedama_%d.png" % f))
 
-# ---------------------------------------------------------------- 自机弹 / 道具
+# ------------------------------------------------------------------ 字符画小图（自机弹、图标），按密度放大
 P = {"R": RED, "r": (150, 30, 48), "W": WHITE, "w": (200, 204, 220), "Y": YEL, "B": BLUE, "b": (40, 80, 170),
      "c": (170, 230, 250), "O": (250, 150, 50), "K": K, "S": SKIN, "V": (170, 100, 240), "v": (110, 60, 180), "G": (90, 200, 110),
      "o": (200, 140, 30), "D": (120, 80, 20)}
 def spr(name, rows, outline=False):
-    cv = ascii_img(rows, P, outline)
-    cv.save(name)
-    return cv.im
-spr("amulet", ["RRRR", "RWWR", "RWWR", "RRRR", "RWWR", "RWWR", "RRRR"])
-spr("needle", ["W", "W", "c", "c", "c", "c", "c", "B", "B"])
-spr("orb", ["..RRRR..", ".RWWWWR.", "RWWWWWWR", "RWWWWWWR", "RWWWWWWR", "RWWWWWWR", ".RWWWWR.", "..RRRR.."])
+    h, w = len(rows), max(len(r) for r in rows)
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch != ".":
+                im.putpixel((x, y), rgba(P[ch]))
+    im = im.resize((w * S, h * S), Image.NEAREST)
+    if outline:
+        pad = Image.new("RGBA", (im.width + 2, im.height + 2), (0, 0, 0, 0))
+        pad.alpha_composite(im, (1, 1))
+        im = outlined(pad, 1)
+    im.save(os.path.join(OUT, name + ".png"))
 spr("gapshot", [".VV.", "VWWV", "VWWV", "VWWV", "VWWV", ".VV."])
 spr("gap", ["....vvvvvv....", "..vvKKKKKKvv..", "vvKKKRWWRKKKvv", "..vvKKKKKKvv..", "....vvvvvv...."])
-spr("hitbox", [".RRR.", "RWWWR", "RWWWR", "RWWWR", ".RRR."])
-spr("heart", [".RR.RR.", "RRRRRRR", "RWRRRRR", "RRRRRRR", ".RRRRR.", "..RRR..", "...R..."], True)
 spr("heart_empty", [".ww.ww.", "w..w..w", "w.....w", "w.....w", ".w...w.", "..w.w..", "...w..."])
 spr("star", ["...Y...", "...Y...", "YYYYYYY", ".YYWYY.", "..YYY..", ".YY.YY.", ".Y...Y."])
 spr("knife", [".W.", "WWW", "WWW", "WwW", "WwW", "WWW", "KKK", ".b.", ".b."])
@@ -265,14 +279,9 @@ spr("fire", ["..O..", ".OYO.", ".OYO.", "OYYYO", "OOYOO", ".ROR.", "..R.."])
 spr("ice", ["..W..", ".WcW.", ".ccc.", "ccccc", ".ccB.", ".cB..", "..B.."])
 spr("moon", ["..YYY..", ".YYY...", "YYY....", "YYY....", "YYY....", ".YYY...", "..YYY.."])
 spr("doll", ["..YYYY..", ".YYYYYY.", ".YSSSSY.", ".YSKKSY.", "..SSSS..", ".BBWWBB.", ".BBBBBB.", "BBBBBBBB", ".WWWWWW.", "..S..S.."], True)
-spr("yinyang", ["..WWWRR..", ".WWWWRRR.", "WWWRWRRRR", "WWWWWRRRR", "WWWWRRRRR", "WWWWRRRRR", "WWWWRWRRR", ".WWWRRRR.", "..WWRRR.."], True)
-# 钱：带方孔的铜钱，深色描边，和敌弹（白芯圆弹）明显区分
-spr("coin", [".ooooo.", "oYYYYYo", "oYDDDYo", "oYD.DYo", "oYDDDYo", "oYYYYYo", ".ooooo."], True)
-# 图标专用
 spr("ic_laser", ["...cc...", "...WW...", "...WW...", "...WW...", "...WW...", "...WW...", "..BWWB..", ".BBBBBB."])
 spr("ic_pillar", ["OOOOOOOO", ".oYYYYo.", ".oYYYYo.", ".oYYYYo.", ".oYYYYo.", ".oYYYYo.", ".oYYYYo.", "OOOOOOOO"])
 spr("ic_starmap", ["Y......c", "..c.....", "....Y...", ".Y......", "......c.", "...c....", "Y.....Y.", "....c..."])
-# 地图节点图标
 spr("n_battle", ["......WW.", ".....WWW.", "....WWW..", "...WWW...", "o.WWW....", ".oWW.....", "DDo......", "DD.o....."])
 spr("n_elite", [".R.....R.", ".RR...RR.", ".RRRRRRR.", "RRWRRRWRR", "RRKRRRKRR", "RRRRRRRRR", ".RWRWRWR.", "..RRRRR.."])
 spr("n_event", ["..GGGG...", ".GG..GG..", ".....GG..", "....GG...", "...GG....", "...GG....", ".........", "...GG...."])
@@ -280,205 +289,219 @@ spr("n_shop", ["..oooo...", "...oo....", "..YYYY...", ".YYYYYY..", "YYYDDYYY.", 
 spr("n_rest", ["RRRRRRRRR", ".RRRRRRR.", "..R...R..", ".RRRRRRR.", "..R...R..", "..R...R..", "..R...R..", "..R...R.."])
 spr("n_boss", ["Y...Y...Y", "YY.YYY.YY", "YYYYYYYYY", "YYRYYYRYY", "YYYYYYYYY", ".YYYYYYY.", ".ooooooo.", "........."])
 
-# ---------------------------------------------------------------- 敌弹图集
-# 16x16 一格；行=形状(小圆/大圆/米粒)，列=颜色。刻意不用黄色，避免和钱混淆。
+# 高密度重画的小物件
+def small(name, w, h, build, ol=True):
+    d = Dr(w, h, S)
+    build(d)
+    im = outlined(d.im, 1) if ol else d.im
+    im.save(os.path.join(OUT, name + ".png"))
+def b_amulet(d):
+    d.rect(0.5, 0.5, 4.5, 7.5, WHITE); d.rect(0.5, 0.5, 4.5, 1.5, RED); d.rect(0.5, 6.5, 4.5, 7.5, RED); d.rect(2, 2.5, 3, 5.5, RED)
+small("amulet", 5, 8, b_amulet)
+def b_needle(d):
+    d.poly([(1.5, 0), (3, 8), (1.5, 10), (0, 8)], (190, 236, 255)); d.line([(1.5, 1), (1.5, 8)], WHITE, 0.5)
+small("needle", 3, 10, b_needle, False)
+def b_orb(d):
+    d.ell(5, 5, 4.6, 4.6, RED); d.ell(5, 5, 3.4, 3.4, (255, 190, 196)); d.ell(5, 5, 2.2, 2.2, WHITE)
+small("orb", 10, 10, b_orb, False)
+def b_hit(d):
+    d.ell(3, 3, 2.9, 2.9, RED); d.ell(3, 3, 1.9, 1.9, WHITE)
+small("hitbox", 6, 6, b_hit, False)
+def b_heart(d):
+    d.ell(2.6, 2.6, 2.4, 2.4, RED); d.ell(6.4, 2.6, 2.4, 2.4, RED); d.poly([(0.4, 3.4), (8.6, 3.4), (4.5, 8.2)], RED)
+    d.ell(2.2, 2.1, 0.9, 0.9, (255, 190, 196))
+small("heart", 9, 9, b_heart)
+def b_yy(d):
+    d.ell(5, 5, 4.6, 4.6, WHITE); d.d.pieslice([0.4 * S, 0.4 * S, 9.6 * S - 1, 9.6 * S - 1], -90, 90, fill=rgba(RED))
+    d.ell(5, 2.7, 2.3, 2.3, RED); d.ell(5, 7.3, 2.3, 2.3, WHITE); d.ell(5, 2.7, 0.8, 0.8, WHITE); d.ell(5, 7.3, 0.8, 0.8, RED)
+small("yinyang", 10, 10, b_yy)
+def b_coin(d):   # 方孔铜钱：与白芯圆形敌弹明显不同
+    d.ell(4, 4, 3.6, 3.6, (206, 146, 36)); d.ell(4, 4, 2.9, 2.9, YEL); d.rect(3, 3, 5, 5, (120, 80, 24))
+small("coin", 8, 8, b_coin)
+
+# ------------------------------------------------------------------ 敌弹图集（每格 16 单位）
 COLS = [(240, 60, 70), (70, 120, 250), (70, 210, 100), (255, 130, 200), (175, 90, 245), (90, 220, 240), (225, 228, 240)]
-atlas = Image.new("RGBA", (16 * len(COLS), 48), (0, 0, 0, 0))
-def disk(im, cx, cy, r, col):
-    for y in range(16):
-        for x in range(16):
-            if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r:
-                im.putpixel((x, y), col)
+atlas = Dr(16 * len(COLS), 48, S)
 for i, c in enumerate(COLS):
-    dk = dark(c, 0.5); col = rgba(c)
-    cell = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    disk(cell, 8, 8, 4.2, dk); disk(cell, 8, 8, 3.2, col); disk(cell, 8, 8, 1.8, (255, 255, 255, 255))
-    atlas.paste(cell, (i * 16, 0))
-    cell = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    disk(cell, 8, 8, 7.2, dk); disk(cell, 8, 8, 6.2, col); disk(cell, 8, 8, 4.0, (255, 255, 255, 255))
-    atlas.paste(cell, (i * 16, 16))
-    cell = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    for y in range(3, 13):
-        for x in range(6, 10):
-            if y in (3, 12) and x in (6, 9):
-                continue
-            edge = y in (3, 12) or x in (6, 9)
-            cell.putpixel((x, y), dk if edge else ((255, 255, 255, 255) if 6 <= y <= 9 else col))
-    atlas.paste(cell, (i * 16, 32))
-atlas.save(os.path.join(OUT, "bullets.png"))
+    ox = i * 16 + 8
+    atlas.ell(ox, 8, 4.3, 4.3, dark(c, 0.5)); atlas.ell(ox, 8, 3.5, 3.5, c); atlas.ell(ox, 8, 2.0, 2.0, WHITE)
+    atlas.ell(ox, 24, 7.3, 7.3, dark(c, 0.5)); atlas.ell(ox, 24, 6.4, 6.4, c); atlas.ell(ox, 24, 4.2, 4.2, WHITE)
+    atlas.ell(ox, 40, 2.6, 5.4, dark(c, 0.5)); atlas.ell(ox, 40, 1.9, 4.6, c); atlas.ell(ox, 40, 0.9, 3.0, WHITE)
+atlas.save("bullets")
 
-# ---------------------------------------------------------------- 图标底板（按稀有度）
+# 图标底板
 for name, c in (("tile_0", (70, 76, 110)), ("tile_1", (60, 110, 190)), ("tile_2", (200, 140, 40)), ("tile_w", (120, 60, 110))):
-    cv = Cv(16, 16)
-    cv.rect(1, 0, 14, 15, dark(c, 0.55)); cv.rect(0, 1, 15, 14, dark(c, 0.55))
-    cv.rect(1, 1, 14, 14, c); cv.rect(2, 2, 13, 13, dark(c, 0.45))
-    cv.rect(2, 2, 13, 2, dark(c, 0.8))
-    cv.save(name)
+    d = Dr(16, 16, S)
+    d.d.rounded_rectangle([0, 0, 16 * S - 1, 16 * S - 1], radius=3 * S, fill=rgba(dark(c, 0.55)))
+    d.d.rounded_rectangle([S, S, 15 * S - 1, 15 * S - 1], radius=2 * S, fill=rgba(c))
+    d.d.rounded_rectangle([2 * S, 2 * S, 14 * S - 1, 14 * S - 1], radius=2 * S, fill=rgba(dark(c, 0.45)))
+    d.save(name)
 
-# ---------------------------------------------------------------- 背景与插画
-def grad(cv, top, bottom, y0=0, y1=None):
-    y1 = cv.h if y1 is None else y1
-    for y in range(y0, y1):
-        k = (y - y0) / max(1, y1 - y0 - 1)
-        k = round(k * 7) / 7   # 色带感
-        c = tuple(int(top[i] + (bottom[i] - top[i]) * k) for i in range(3))
-        cv.rect(0, y, cv.w - 1, y, c)
-
-def stars(cv, n, y1, seed):
+# ------------------------------------------------------------------ 背景与插画（设计单位作画，自动 2 倍密度）
+def grad(d, top, bottom, y0=0, y1=None, bands=10):
+    y1 = d.h if y1 is None else y1
+    for i in range(bands):
+        k = i / (bands - 1)
+        c = tuple(int(top[j] + (bottom[j] - top[j]) * k) for j in range(3))
+        d.rect(0, y0 + (y1 - y0) * i / bands, d.w, y0 + (y1 - y0) * (i + 1) / bands + 1, c)
+def stars(d, n, y1, seed):
     r = random.Random(seed)
     for i in range(n):
-        cv.px(r.randrange(cv.w), r.randrange(y1), r.choice([(255, 255, 230), (160, 170, 220), (110, 110, 170)]))
-
-def moon(cv, cx, cy, r):
-    cv.ell(cx, cy, r + 3, r + 3, (60, 60, 110)); cv.ell(cx, cy, r, r, (250, 245, 200)); cv.ell(cx - r * 0.3, cy - r * 0.2, r * 0.25, r * 0.2, (230, 222, 170))
-
-def hills(cv, y, amp, color, seed):
-    r = random.Random(seed)
-    ph = [r.uniform(0, 6.28) for _ in range(3)]
-    for x in range(cv.w):
-        h = y + math.sin(x * 0.045 + ph[0]) * amp + math.sin(x * 0.11 + ph[1]) * amp * 0.4
-        cv.rect(x, int(h), x, cv.h - 1, color)
-
-def trees(cv, y, n, color, seed):
+        x = r.uniform(0, d.w); y = r.uniform(0, y1); c = r.choice([(255, 255, 230), (160, 170, 220), (110, 110, 170)])
+        d.rect(x, y, x + 0.5, y + 0.5, c)
+def moon(d, cx, cy, r):
+    d.ell(cx, cy, r + 3, r + 3, (58, 56, 108)); d.ell(cx, cy, r + 1.4, r + 1.4, (92, 88, 140)); d.ell(cx, cy, r, r, (252, 246, 204))
+    d.ell(cx - r * 0.3, cy - r * 0.2, r * 0.26, r * 0.2, (232, 224, 174)); d.ell(cx + r * 0.35, cy + r * 0.3, r * 0.16, r * 0.13, (232, 224, 174))
+def hills(d, y, amp, color, seed):
+    r = random.Random(seed); ph = [r.uniform(0, 6.28) for _ in range(2)]
+    pts = [(0, d.h)]
+    for i in range(0, int(d.w * 2) + 1):
+        x = i / 2
+        pts.append((x, y + math.sin(x * 0.045 + ph[0]) * amp + math.sin(x * 0.11 + ph[1]) * amp * 0.4))
+    pts.append((d.w, d.h))
+    d.poly(pts, color)
+def trees(d, y, n, color, seed):
     r = random.Random(seed)
     for i in range(n):
-        x = r.randrange(cv.w); hh = r.randrange(10, 22)
-        for k in range(hh):
-            ww = (k * 5) // hh
-            cv.rect(x - ww, y - hh + k, x + ww, y - hh + k, color)
-        cv.rect(x, y, x, y + 2, dark(color))
-
-def torii(cv, cx, base, s=1.0, color=(200, 50, 55)):
-    w = int(22 * s); h = int(30 * s); t = max(2, int(3 * s))
-    d = dark(color)
-    cv.rect(cx - w, base - h, cx - w + t, base, color); cv.rect(cx + w - t, base - h, cx + w, base, color)
-    cv.rect(cx - w - 5, base - h - t, cx + w + 5, base - h, color)
-    cv.rect(cx - w - 7, base - h - t - 2, cx + w + 7, base - h - t, d)
-    cv.rect(cx - w, base - h + t * 2, cx + w, base - h + t * 3 - 1, color)
-    cv.rect(cx - w, base - 3, cx - w + t, base, d); cv.rect(cx + w - t, base - 3, cx + w, base, d)
+        x = r.uniform(0, d.w); hh = r.uniform(10, 22)
+        d.poly([(x, y - hh), (x + hh * 0.3, y), (x - hh * 0.3, y)], color)
+        d.poly([(x, y - hh * 0.6), (x + hh * 0.36, y + 1), (x - hh * 0.36, y + 1)], color)
+        d.rect(x - 0.5, y, x + 0.5, y + 3, dark(color))
+def torii(d, cx, base, s=1.0, color=(204, 56, 62)):
+    w = 22 * s; h = 30 * s; t = max(2, 3 * s); dk = dark(color)
+    d.rect(cx - w, base - h, cx - w + t, base, color); d.rect(cx + w - t, base - h, cx + w, base, color)
+    d.rect(cx - w + t * 0.6, base - h, cx - w + t, base, dk); d.rect(cx + w - t * 0.4, base - h, cx + w, base, dk)
+    d.poly([(cx - w - 7, base - h - t - 2.5), (cx + w + 7, base - h - t - 2.5), (cx + w + 5, base - h - t), (cx - w - 5, base - h - t)], (60, 44, 60))
+    d.rect(cx - w - 5, base - h - t, cx + w + 5, base - h, color)
+    d.rect(cx - w, base - h + t * 2, cx + w, base - h + t * 3, color)
+    d.rect(cx - 1.2 * s, base - h, cx + 1.2 * s, base - h + t * 2, color)
+def framed(d):
+    c = (150, 135, 205)
+    d.rect(0, 0, d.w, 0.5, c); d.rect(0, d.h - 0.5, d.w, d.h, c); d.rect(0, 0, 0.5, d.h, c); d.rect(d.w - 0.5, 0, d.w, d.h, c)
+def put_char(d, name, x, y, k=1.8):
+    d.paste(char_img(name, k), x, y)
 
 SW, SH = 184, 64
 def scene(name, build):
-    cv = Cv(SW, SH)
-    build(cv)
-    # 边框
-    for x in range(SW):
-        cv.px(x, 0, (150, 135, 205)); cv.px(x, SH - 1, (150, 135, 205))
-    for y in range(SH):
-        cv.px(0, y, (150, 135, 205)); cv.px(SW - 1, y, (150, 135, 205))
-    cv.save(name)
+    d = Dr(SW, SH, S)
+    build(d); framed(d); d.save(name)
 
-def sc_shrine(cv):
-    grad(cv, (14, 12, 40), (50, 34, 86)); stars(cv, 40, 36, 1); moon(cv, 150, 14, 7)
-    hills(cv, 44, 4, (24, 34, 50), 2); trees(cv, 50, 14, (18, 44, 40), 3)
-    cv.rect(0, 52, SW - 1, SH - 1, (40, 46, 56)); cv.rect(70, 52, 114, SH - 1, (86, 86, 96))
-    torii(cv, 92, 54, 0.8)
-    cv.rect(84, 44, 100, 53, (120, 80, 50)); cv.rect(82, 41, 102, 44, (70, 50, 60)); cv.rect(88, 49, 96, 53, (60, 40, 30))
-def sc_kappa(cv):
-    grad(cv, (20, 40, 60), (60, 110, 110)); hills(cv, 40, 5, (30, 70, 70), 5)
-    cv.rect(0, 50, SW - 1, SH - 1, (70, 100, 70))
+def sc_shrine(d):
+    grad(d, (14, 12, 40), (54, 36, 90)); stars(d, 60, 36, 1); moon(d, 150, 14, 7)
+    hills(d, 44, 4, (24, 34, 50), 2); trees(d, 51, 16, (18, 46, 42), 3)
+    d.rect(0, 52, SW, SH, (40, 46, 56)); d.poly([(76, 52), (108, 52), (116, SH), (68, SH)], (92, 92, 104))
+    d.rect(83, 44, 101, 53, (126, 86, 56)); d.poly([(80, 44.5), (104, 44.5), (99, 39), (85, 39)], (74, 54, 66)); d.rect(88, 49, 96, 53, (64, 44, 34))
+    torii(d, 92, 58, 0.95)
+def sc_kappa(d):
+    grad(d, (24, 50, 70), (70, 124, 120)); hills(d, 40, 5, (34, 78, 76), 5)
+    d.rect(0, 50, SW, SH, (76, 108, 76))
     for i in range(8):
-        cv.rect(36 + i * 10, 18, 45 + i * 10, 24, (90, 170, 110) if i % 2 == 0 else WHITE)
-    cv.rect(38, 24, 39, 52, (110, 80, 50)); cv.rect(112, 24, 113, 52, (110, 80, 50))
-    cv.rect(34, 40, 118, 52, (140, 100, 60)); cv.rect(34, 40, 118, 42, (170, 125, 80))
+        d.rect(30 + i * 10, 14, 40 + i * 10, 21, (96, 176, 116) if i % 2 == 0 else WHITE)
+    d.rect(31.5, 21, 33.5, 52, (116, 86, 56)); d.rect(106.5, 21, 108.5, 52, (116, 86, 56))
+    d.rect(28, 40, 112, 53, (146, 106, 66)); d.rect(28, 40, 112, 42.5, (176, 131, 86))
     r = random.Random(9)
     for i in range(7):
-        x = 40 + i * 11; c = r.choice([(150, 150, 165), (110, 120, 140), (180, 160, 90)])
-        cv.rect(x, 33, x + 6, 39, c); cv.px(x + 2, 35, r.choice([(250, 80, 80), (90, 250, 120), YEL])); cv.px(x + 4, 37, (40, 40, 50))
-    cv.paste(CHARS["nitori"], 128, 6, 2)
-def sc_fairies(cv):
-    grad(cv, (20, 50, 60), (90, 150, 110)); trees(cv, 52, 26, (26, 70, 56), 11); trees(cv, 58, 14, (20, 50, 44), 12)
-    cv.rect(0, 56, SW - 1, SH - 1, (40, 80, 56))
+        x = 34 + i * 11; c = r.choice([(156, 156, 170), (116, 126, 146), (186, 166, 96)])
+        d.rect(x, 32, x + 7, 40, c); d.ell(x + 2.4, 35, 1, 1, r.choice([(250, 80, 80), (90, 250, 120), YEL])); d.rect(x + 4, 36.5, x + 6, 38.5, (46, 46, 56))
+    put_char(d, "nitori", 120, -4)
+def sc_fairies(d):
+    grad(d, (24, 56, 66), (96, 156, 116)); trees(d, 53, 28, (28, 74, 60), 11); trees(d, 59, 14, (22, 54, 48), 12)
+    d.rect(0, 57, SW, SH, (44, 86, 60))
     for i, n in enumerate(("sunny", "luna", "starf")):
-        cv.paste(CHARS[n], 26 + i * 48, 4 + (i % 2) * 4, 2)
-    cv.paste(Image.open(os.path.join(OUT, "coin.png")), 150, 20, 2)
-def sc_tea(cv):
-    grad(cv, (30, 30, 70), (120, 110, 150), 0, 36); moon(cv, 40, 12, 6)
-    grad(cv, (50, 70, 110), (24, 36, 70), 36, SH)
+        put_char(d, n, 14 + i * 50, -5 + (i % 2) * 5, 1.75)
+    d.paste(Image.open(os.path.join(OUT, "coin.png")).resize((36, 36), Image.NEAREST), 158, 14)
+def sc_tea(d):
+    grad(d, (30, 30, 72), (124, 114, 156), 0, 36); moon(d, 40, 12, 6)
+    grad(d, (54, 74, 116), (24, 36, 72), 36, SH)
     r = random.Random(4)
-    for i in range(40):
-        x = r.randrange(SW); y = r.randrange(38, SH - 2); cv.rect(x, y, x + r.randrange(3, 10), y, (110, 130, 170))
-    for i in range(6):
-        x = r.randrange(SW); y = r.randrange(26, 44); cv.ell(x, y, 18, 3, (170, 170, 200, 90))
-    cv.rect(0, 54, SW - 1, SH - 1, (50, 70, 60))
-    cv.rect(80, 44, 110, 46, WHITE); cv.rect(94, 46, 96, 56, (150, 150, 160)); cv.rect(88, 56, 102, 57, (150, 150, 160))
-    cv.ell(92, 39, 5, 4, (230, 230, 240)); cv.rect(97, 38, 100, 39, (230, 230, 240)); cv.rect(90, 34, 94, 35, (200, 60, 70))
-    cv.rect(102, 41, 106, 43, (230, 230, 240)); cv.px(104, 38, (220, 220, 230)); cv.px(105, 36, (220, 220, 230)); cv.px(103, 34, (200, 200, 215))
-def sc_kedama(cv):
-    grad(cv, (26, 24, 60), (80, 70, 120)); hills(cv, 46, 4, (40, 44, 70), 8)
-    cv.rect(0, 54, SW - 1, SH - 1, (50, 54, 70))
+    for i in range(46):
+        x = r.uniform(0, SW); y = r.uniform(38, SH - 2); d.rect(x, y, x + r.uniform(3, 10), y + 0.5, (112, 132, 172))
+    d.rect(0, 55, SW, SH, (54, 74, 64))
+    d.ell(95, 45, 16, 2.2, WHITE); d.rect(94, 46, 96, 57, (156, 156, 166)); d.ell(95, 57.5, 7, 1.2, (156, 156, 166))
+    d.ell(91, 39, 5.5, 4.5, (236, 236, 244)); d.poly([(96, 37), (101, 35.5), (100, 38.5), (96, 40)], (236, 236, 244)); d.ell(91, 34.4, 2.4, 1, (206, 66, 76))
+    d.rect(102, 40.4, 107, 43.5, (236, 236, 244))
+    for i, (x, y) in enumerate(((104.5, 37), (105.5, 34), (103.6, 31))):
+        d.ell(x, y, 0.8, 0.8, (226, 226, 236))
+def sc_kedama(d):
+    grad(d, (26, 24, 62), (84, 74, 124)); hills(d, 46, 4, (42, 46, 72), 8)
+    d.rect(0, 55, SW, SH, (52, 56, 72))
     r = random.Random(6)
-    for i in range(34):
-        cv.paste(CHARS["kedama"], r.randrange(-4, SW - 12), r.randrange(2, 46), 1)
-def sc_kourin(cv):
-    grad(cv, (60, 44, 40), (96, 70, 56))
+    for i in range(36):
+        d.paste(kedama(r.choice([1.6, 2, 2, 2.6]), i % 2), r.uniform(-4, SW - 12), r.uniform(0, 44))
+def sc_kourin(d):
+    grad(d, (64, 46, 42), (100, 74, 58))
     r = random.Random(13)
-    for sy in (14, 30):
-        cv.rect(8, sy, 120, sy + 1, (130, 90, 60))
+    for sy in (15, 32):
+        d.rect(8, sy, 116, sy + 1.6, (136, 96, 64))
         for i in range(12):
-            x = 12 + i * 9; h = r.randrange(4, 10)
-            cv.rect(x, sy - h, x + 5, sy - 1, r.choice([(90, 140, 190), (190, 90, 90), (200, 180, 100), (120, 170, 120), (160, 120, 190)]))
-    cv.rect(0, 46, SW - 1, SH - 1, (110, 76, 52)); cv.rect(0, 46, SW - 1, 48, (150, 106, 70))
-    cv.ell(60, 40, 7, 7, (120, 70, 200)); cv.ell(58, 38, 3, 3, (200, 170, 255)); cv.ell(60, 40, 10, 10, (160, 120, 255, 60))
-    cv.paste(CHARS["rinnosuke"], 130, 4, 2)
-def sc_rest(cv):
-    grad(cv, (16, 14, 44), (70, 44, 96)); stars(cv, 50, 40, 21); moon(cv, 30, 14, 8)
-    hills(cv, 46, 3, (26, 30, 56), 22); trees(cv, 52, 10, (20, 40, 44), 23)
-    cv.rect(0, 54, SW - 1, SH - 1, (44, 48, 60)); cv.rect(74, 54, 110, SH - 1, (96, 96, 106))
-    torii(cv, 92, 56, 1.25)
-    for x in (52, 132):
-        cv.rect(x, 44, x + 4, 55, (120, 120, 130)); cv.rect(x - 1, 40, x + 5, 44, (130, 130, 140)); cv.rect(x + 1, 41, x + 3, 43, (255, 220, 120))
-    cv.paste(CHARS["reimu"], 81, 4, 2)
-
+            x = 12 + i * 8.6; h = r.uniform(5, 11)
+            d.rect(x, sy - h, x + 5.5, sy, r.choice([(96, 146, 196), (196, 96, 96), (206, 186, 106), (126, 176, 126), (166, 126, 196)]))
+            d.rect(x + 4.4, sy - h, x + 5.5, sy, (60, 50, 60))
+    d.rect(0, 47, SW, SH, (116, 80, 56)); d.rect(0, 47, SW, 49.4, (156, 110, 74))
+    d.ell(58, 39, 10.5, 10.5, (94, 64, 150)); d.ell(58, 39, 7.4, 7.4, (132, 82, 212)); d.ell(55.6, 36.4, 2.8, 2.8, (212, 184, 255))
+    put_char(d, "rinnosuke", 122, -5)
+def sc_rest(d):
+    grad(d, (16, 14, 46), (74, 46, 100)); stars(d, 70, 40, 21); moon(d, 30, 14, 8)
+    hills(d, 46, 3, (28, 32, 58), 22); trees(d, 53, 12, (22, 42, 46), 23)
+    d.rect(0, 55, SW, SH, (46, 50, 62)); d.poly([(78, 55), (106, 55), (112, SH), (72, SH)], (100, 100, 110))
+    torii(d, 92, 59, 1.35)
+    for x in (48, 132):
+        d.rect(x, 45, x + 4.6, 57, (126, 126, 136)); d.poly([(x - 2, 45), (x + 6.6, 45), (x + 5, 40.6), (x - 0.4, 40.6)], (136, 136, 146)); d.rect(x + 1, 41.6, x + 3.6, 44, (255, 224, 126))
+    put_char(d, "reimu", 70, 2, 1.6)
 scene("ev_shrine", sc_shrine); scene("ev_kappa", sc_kappa); scene("ev_fairies", sc_fairies)
 scene("ev_tea", sc_tea); scene("ev_kedama", sc_kedama); scene("ev_kourin", sc_kourin); scene("ev_rest", sc_rest)
 
-# 标题画面
-cv = Cv(200, 150)
-grad(cv, (10, 8, 30), (70, 40, 100)); stars(cv, 90, 110, 31); moon(cv, 150, 34, 20)
-hills(cv, 118, 6, (30, 28, 60), 32); hills(cv, 130, 4, (20, 18, 44), 33)
-torii(cv, 100, 140, 1.5, (150, 40, 60))
-cv.paste(CHARS["reimu"], 78, 52, 2)
-cv.save("title_art")
+# 标题画面背景（立绘由游戏叠加）
+d = Dr(200, 150, S)
+grad(d, (10, 8, 32), (76, 44, 106), bands=14); stars(d, 130, 112, 31); moon(d, 152, 36, 21)
+hills(d, 116, 6, (32, 30, 64), 32); hills(d, 130, 4, (22, 20, 46), 33)
+torii(d, 100, 150, 1.7, (156, 44, 64))
+d.save("title_art")
 
-# 第一章战斗背景：雾之湖（纵向可循环的水面）
-cv = Cv(200, 256)
-cv.rect(0, 0, 199, 255, (22, 34, 66))
+# 第一章战斗背景：雾之湖（纵向可循环）
+d = Dr(200, 256, S)
+d.rect(0, 0, 200, 256, (24, 36, 70))
 r = random.Random(41)
-for i in range(240):
-    x = r.randrange(200); y = r.randrange(256); l = r.randrange(4, 16)
-    c = r.choice([(34, 52, 92), (30, 46, 84), (44, 66, 110)])
-    for k in range(l):
-        cv.px((x + k) % 200, y, c)
-for i in range(26):
-    x = r.randrange(200); y = r.randrange(256)
-    cv.px(x, y, (150, 180, 220)); cv.px((x + 1) % 200, y, (90, 120, 170))
-cv.save("bg_lake")
-# 雾
-cv = Cv(96, 24)
-for i in range(7):
-    cv.ell(r.randrange(14, 82), r.randrange(8, 16), r.randrange(12, 30), r.randrange(4, 8), (200, 215, 240, 26))
-cv.save("mist")
+for i in range(300):
+    x = r.uniform(0, 200); y = r.uniform(0, 256); l = r.uniform(4, 18)
+    c = r.choice([(34, 52, 94), (30, 46, 86), (44, 66, 112)])
+    d.rect(x, y, x + l, y + 0.5, c)
+    if x + l > 200:
+        d.rect(0, y, x + l - 200, y + 0.5, c)
+for i in range(40):
+    x = r.uniform(0, 198); y = r.uniform(0, 255)
+    d.rect(x, y, x + 0.5, y + 0.5, (156, 186, 226)); d.rect(x + 0.5, y, x + 1.5, y + 0.5, (94, 124, 174))
+d.save("bg_lake")
+# 雾：先画白块再模糊，边缘柔和
+m = Image.new("L", (192 * S, 48 * S), 0)
+md = ImageDraw.Draw(m)
+for i in range(9):
+    cx = r.uniform(40, 152) * S; cy = r.uniform(16, 32) * S; rx = r.uniform(18, 40) * S; ry = r.uniform(5, 10) * S
+    md.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=70)
+m = m.filter(ImageFilter.GaussianBlur(7 * S))
+mist = Image.new("RGBA", m.size, (206, 220, 244, 255)); mist.putalpha(m)
+mist.save(os.path.join(OUT, "mist.png"))
 
 # 应用图标
-ic = Cv(192, 192)
-grad(ic, (40, 24, 90), (130, 50, 110))
-ic.ell(96, 96, 78, 78, (250, 240, 215)); ic.ell(96, 96, 70, 70, (60, 36, 100))
-ic.paste(CHARS["reimu"], 96 - 11 * 5, 96 - 14 * 5 + 4, 5)
+ic = Dr(192, 192, 1)
+grad(ic, (46, 28, 96), (136, 56, 116), bands=24)
+ic.ell(96, 96, 80, 80, (252, 242, 218)); ic.ell(96, 96, 72, 72, (66, 40, 106))
+ic.paste(char_img("reimu", 3.2).crop((0, 0, 154, 170)), 19, 14)
 ic.im.save(os.path.join(ROOT, "assets", "icon.png"))
 
 # 预览图（开发用）
-names = ["reimu", "fairy_0", "fairy_1", "fairy_red_0", "bigfairy_0", "kedama_0", "rumia", "daiyousei_0", "cirno_0", "cirno_1", "nitori", "rinnosuke", "sunny", "luna", "starf"]
-sheet = Image.new("RGBA", (len(names) * 26 * 3, 34 * 3), (50, 46, 80, 255))
+names = ["reimu", "fairy_0", "fairy_1", "fairy_red_0", "bigfairy_0", "kedama_0", "rumia", "daiyousei_0", "cirno_0", "cirno_1"]
+sheet = Image.new("RGBA", (len(names) * 104, 300 + 216), (50, 46, 80, 255))
 for i, n in enumerate(names):
     im = Image.open(os.path.join(OUT, n + ".png"))
-    sheet.alpha_composite(im.resize((im.width * 3, im.height * 3), Image.NEAREST), (i * 78 + 4, 6))
+    sheet.alpha_composite(im.resize((im.width * 2, im.height * 2), Image.NEAREST), (i * 104 + 4, 6))
+for i, n in enumerate(PORTRAITS):
+    sheet.alpha_composite(Image.open(os.path.join(OUT, "p_%s.png" % n)), (i * 172 + 4, 150))
+sheet.alpha_composite(Image.open(os.path.join(OUT, "bullets.png")), (4, 366 + 44))
 sheet.save("/tmp/art_chars.png")
-sc = Image.new("RGBA", (SW * 2 + 6, SH * 4 + 12 + 150), (20, 20, 30, 255))
+sc = Image.new("RGBA", (SW * S * 2 + 6, (SH * S + 4) * 4), (20, 20, 30, 255))
 for i, n in enumerate(["ev_shrine", "ev_kappa", "ev_fairies", "ev_tea", "ev_kedama", "ev_kourin", "ev_rest"]):
-    sc.alpha_composite(Image.open(os.path.join(OUT, n + ".png")), ((i % 2) * (SW + 6), (i // 2) * (SH + 4)))
-sc.alpha_composite(Image.open(os.path.join(OUT, "title_art.png")), (SW + 6 - 16, 3 * (SH + 4)))
-sc.alpha_composite(Image.open(os.path.join(ROOT, "assets", "icon.png")).resize((96, 96), Image.NEAREST), (10, 4 * (SH + 4) + 20))
-sc.alpha_composite(Image.open(os.path.join(OUT, "bullets.png")).resize((224, 96), Image.NEAREST), (120, 3 * (SH + 4) + 70 + 80)) if False else None
+    sc.alpha_composite(Image.open(os.path.join(OUT, n + ".png")), ((i % 2) * (SW * S + 6), (i // 2) * (SH * S + 4)))
+sc.alpha_composite(Image.open(os.path.join(ROOT, "assets", "icon.png")).resize((128, 128)), (SW * S + 100, 3 * (SH * S + 4)))
 sc.save("/tmp/art_scenes.png")
 print("ok")

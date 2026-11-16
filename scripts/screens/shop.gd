@@ -10,7 +10,7 @@ func _ready() -> void:
 	UI.label(self, "香霖堂", 22, 12, Color(1, 0.85, 0.5))
 	var rs := Sprite2D.new()
 	rs.texture = G.tex("rinnosuke")
-	rs.position = Vector2(G.FIELD_W / 2 + 34, 24)
+	rs.position = Vector2(G.FIELD_W / 2 + 36, 22)
 	add_child(rs)
 	var y := 42.0
 	var disc := 0.7 if G.has("member") else 1.0

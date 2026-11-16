@@ -14,12 +14,21 @@ const SCREENS := {
 
 var screen: Node
 var screen_name := ""
+var _fade: ColorRect
 
 func _ready() -> void:
 	G.main = self
 	UI.install_theme(get_tree().root)
 	if G.bot:
 		add_child(load("res://scripts/core/autotest.gd").new())
+	var cl := CanvasLayer.new()
+	cl.layer = 10
+	add_child(cl)
+	_fade = ColorRect.new()
+	_fade.color = Color(0.05, 0.04, 0.1, 0.0)
+	_fade.size = Vector2(G.FIELD_W, 2000)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cl.add_child(_fade)
 	goto("title")
 
 func goto(name: String, arg := {}) -> void:
@@ -31,6 +40,9 @@ func goto(name: String, arg := {}) -> void:
 	if screen.has_method("setup"):
 		screen.setup(arg)
 	add_child(screen)
+	# 切换界面时的淡入
+	_fade.color.a = 1.0
+	_fade.create_tween().tween_property(_fade, "color:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE)
 
 func start_run() -> void:
 	G.new_run()

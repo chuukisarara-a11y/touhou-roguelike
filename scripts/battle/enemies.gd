@@ -70,7 +70,7 @@ func spawn(kind: String, move: Dictionary, hp_mult: float) -> Enemy:
 	var d: Dictionary = Db.ENEMIES[kind]
 	e.id = _next_id; _next_id += 1
 	e.kind = kind; e.def = d
-	e.max_hp = d.hp * hp_mult; e.hp = e.max_hp
+	e.max_hp = d.hp * hp_mult * G.DIFF_HP; e.hp = e.max_hp
 	e.radius = d.r; e.coins = d.coins
 	e.move = move
 	e.atk_t = randf_range(0.5, 1.3)
@@ -88,7 +88,7 @@ func spawn_boss(bid: String, hp_mult: float) -> Enemy:
 	e.id = _next_id; _next_id += 1
 	e.kind = bid; e.def = d; e.is_boss = true
 	e.radius = d.r; e.coins = d.coins
-	e.phases = d.phases; e.hp_mult = hp_mult
+	e.phases = d.phases; e.hp_mult = hp_mult * G.DIFF_BOSS_HP
 	e.pos = Vector2(G.FIELD_W / 2, -20)
 	e.target = Vector2(G.FIELD_W / 2, 62)
 	e.load_phase()
@@ -151,7 +151,7 @@ func _tick_mob(e: Enemy, dt: float, h: float, battle) -> void:
 	if can_shoot and e.def.atk != "":
 		e.atk_t -= dt
 		if e.atk_t <= 0.0:
-			e.atk_t = e.def.cd * randf_range(0.85, 1.15)
+			e.atk_t = e.def.cd / G.DIFF_RATE * randf_range(0.85, 1.15)
 			Pat.enemy_attack(e, battle)
 
 func _tick_boss(e: Enemy, dt: float, battle) -> void:
@@ -170,9 +170,9 @@ func _draw() -> void:
 		if e.def.get("anim", false):
 			tn += "_%d" % (int(e.t * 5.0) % 2)
 		var t: Texture2D = G.tex(tn)
-		var p: Vector2 = (e.pos - t.get_size() / 2.0).round()
+		var p: Vector2 = (e.pos - t.get_size() / 2.0)
 		if e.is_boss:
-			p.y += roundf(sin(e.t * 2.5) * 2.0)
+			p.y += sin(e.t * 2.5) * 2.0
 		var c := Color.WHITE
 		if e.flash > 0.0:
 			c = Color(4, 4, 4)

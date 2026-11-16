@@ -150,13 +150,13 @@ func _draw() -> void:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.85, 0.5, 0.75 * z[4] / 0.25))
 	var gt := G.tex("gap")
 	for g in gaps:
-		draw_texture(gt, (g[0] - gt.get_size() / 2.0).round(), Color(1, 1, 1, minf(1.0, g[1] * 4.0)))
+		draw_texture(gt, (g[0] - gt.get_size() / 2.0), Color(1, 1, 1, minf(1.0, g[1] * 4.0)))
 	for s in list:
 		var t: Texture2D = G.tex(s.kind)
 		var sz := t.get_size()
 		if s.rot:
-			draw_set_transform(s.pos.round(), s.vel.angle() + PI / 2.0, Vector2.ONE)
+			draw_set_transform(s.pos, s.vel.angle() + PI / 2.0, Vector2.ONE)
 			draw_texture(t, -sz / 2.0)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
-			draw_texture(t, (s.pos - sz / 2.0).round())
+			draw_texture(t, (s.pos - sz / 2.0))

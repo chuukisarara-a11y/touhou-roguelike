@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dxj30xcfrmcxu"
-path="res://.godot/imported/sunny.png-91c41c4c72dd014401766cbf4fcf3b41.ctex"
+uid="uid://bceok6s0t75c4"
+path="res://.godot/imported/p_rinnosuke.png-1603c36114b89681a481f440e5e79d4f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/sunny.png"
-dest_files=["res://.godot/imported/sunny.png-91c41c4c72dd014401766cbf4fcf3b41.ctex"]
+source_file="res://assets/sprites/p_rinnosuke.png"
+dest_files=["res://.godot/imported/p_rinnosuke.png-1603c36114b89681a481f440e5e79d4f.ctex"]
 
 [params]
 

@@ -77,7 +77,7 @@ func _draw() -> void:
 			draw_circle(p, r + 3, Color(1, 1, 1, 0.9))
 		elif is_reach:
 			draw_arc(p, r + 3 + sin(t * 5.0), 0, TAU, 24, Color(1, 1, 1, 0.9), 1.0)
-		draw_circle(p, r, c.darkened(0.8) if passed else (c.darkened(0.45) if (is_reach or i == G.run.pos) else c.darkened(0.65)))
+		draw_circle(p, r, c.darkened(0.8) if passed else (c.darkened(0.4) if (is_reach or i == G.run.pos) else c.darkened(0.55)))
 		draw_arc(p, r, 0, TAU, 24, c if not passed else c.darkened(0.5), 1.0)
 		var it := G.tex("n_" + n2.type)
 		draw_texture(it, (p - it.get_size() / 2.0).round(), Color.WHITE if not passed else Color(0.55, 0.55, 0.6))

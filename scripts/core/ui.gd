@@ -46,6 +46,8 @@ static func label(parent: Node, text: String, y: float, size := 12, color := Col
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_constant_override("line_spacing", 2)
 	parent.add_child(l)
+	if not (parent is Button):
+		_appear(l, parent, 0.0)
 	return l
 
 ## 按钮：文字用内嵌 Label 显示（Button 自带的换行宽度不可靠），高度按文字自动撑开。
@@ -61,6 +63,10 @@ static func button(parent: Node, text: String, y: float, cb: Callable, h := 26.0
 	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(cb)
 	parent.add_child(b)
+	b.pivot_offset = b.size / 2.0
+	b.button_down.connect(func(): b.create_tween().tween_property(b, "scale", Vector2(0.96, 0.96), 0.06))
+	b.button_up.connect(func(): b.create_tween().tween_property(b, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
+	_appear(b, parent, 14.0)
 	var l := label(b, text, roundf((b.size.y - th) / 2.0) + 1.0, 12, Color(0.95, 0.93, 1.0), 5.0 + ix, w - 10.0 - ix)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if left:
@@ -72,6 +78,19 @@ static func button(parent: Node, text: String, y: float, cb: Callable, h := 26.0
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(ic)
 	return b
+
+## 入场动效：按创建顺序依次淡入，按钮带一点横向滑入
+static func _appear(c: CanvasItem, parent: Node, slide: float) -> void:
+	var n: int = parent.get_meta("ui_n", 0)
+	parent.set_meta("ui_n", n + 1)
+	c.modulate.a = 0.0
+	var tw := c.create_tween().set_parallel()
+	var delay := minf(0.035 * n, 0.4)
+	tw.tween_property(c, "modulate:a", 1.0, 0.18).set_delay(delay)
+	if slide != 0.0:
+		var x: float = c.position.x
+		c.position.x = x + slide
+		tw.tween_property(c, "position:x", x, 0.26).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 static func set_disabled(b: Button, d: bool) -> void:
 	b.disabled = d
@@ -86,6 +105,7 @@ static func picture(parent: Node, tex_name: String, y: float) -> Sprite2D:
 	s.centered = false
 	s.position = Vector2(roundf((G.FIELD_W - s.texture.get_width()) / 2.0), y)
 	parent.add_child(s)
+	_appear(s, parent, 0.0)
 	return s
 
 ## 16x16 图标：稀有度底板 + 贴图或单字

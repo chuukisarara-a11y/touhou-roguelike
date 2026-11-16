@@ -42,4 +42,4 @@ func _draw() -> void:
 	var hrt := G.tex("heart")
 	for it in list:
 		var t: Texture2D = c if it[2] == "coin" else hrt
-		draw_texture(t, (it[0] - t.get_size() / 2.0).round())
+		draw_texture(t, (it[0] - t.get_size() / 2.0))

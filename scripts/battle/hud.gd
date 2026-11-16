@@ -9,7 +9,7 @@ var cutin_tex: Texture2D
 
 func cutin(tex_name: String) -> void:
 	cutin_tex = G.tex(tex_name)
-	cutin_t = 1.4
+	cutin_t = 1.8
 
 func setup(b) -> void:
 	battle = b
@@ -23,10 +23,12 @@ func _draw() -> void:
 	var f := G.font
 	var run: Dictionary = G.run
 	if cutin_t > 0.0 and cutin_tex != null:
-		var k := clampf(cutin_t / 1.4, 0, 1)
-		var a := minf(1.0, minf(k * 4.0, (1.0 - k) * 6.0)) * 0.75
-		var sz := cutin_tex.get_size() * 4.0
-		draw_texture_rect(cutin_tex, Rect2(G.FIELD_W - sz.x - 6 + (k - 0.5) * 30.0, 56, sz.x, sz.y), false, Color(1, 1, 1, a))
+		var k := clampf(cutin_t / 1.8, 0, 1)
+		var a := minf(1.0, minf(k * 5.0, (1.0 - k) * 7.0)) * 0.92
+		var sz := cutin_tex.get_size() * 1.25
+		var slide := pow(k, 3.0) * 60.0 - pow(1.0 - k, 6.0) * 40.0
+		draw_rect(Rect2(0, 78, G.FIELD_W, sz.y - 36), Color(0.1, 0.06, 0.2, 0.45 * a))
+		draw_texture_rect(cutin_tex, Rect2(G.FIELD_W - sz.x - 4 + slide, 50, sz.x, sz.y), false, Color(1, 1, 1, a))
 	var h := G.tex("heart")
 	var he := G.tex("heart_empty")
 	for i in run.max_hearts:
@@ -41,6 +43,13 @@ func _draw() -> void:
 		for i in boss.phases.size() - boss.phase_i - 1:
 			draw_rect(Rect2(8 + i * 6, 26, 4, 3), Color(1, 0.8, 0.85))
 		draw_string(f, Vector2(0, 40), boss.def.name + ("  " + boss.phase_name() if boss.phase_name() != "" else ""), HORIZONTAL_ALIGNMENT_CENTER, G.FIELD_W, 12, Color(1, 0.95, 1, 0.9))
+	if boss != null and not boss.dead:
+		# 屏幕底部的敌机位置标记
+		var bx: float = clampf(boss.pos.x, 12, G.FIELD_W - 12)
+		var by: float = battle.field_h
+		draw_rect(Rect2(bx - 13, by - 3, 26, 3), Color(1, 0.25, 0.35, 0.9))
+		draw_colored_polygon(PackedVector2Array([Vector2(bx - 5, by - 3), Vector2(bx + 5, by - 3), Vector2(bx, by - 9)]), Color(1, 0.25, 0.35, 0.9))
+		draw_string(f, Vector2(bx - 13, by - 11), "敌", HORIZONTAL_ALIGNMENT_CENTER, 26, 12, Color(1, 0.6, 0.65, 0.9))
 	elif battle.kind == "battle":
 		draw_string(f, Vector2(0, 15), "第 %d/%d 波" % [battle.wave_i + 1, battle.waves.size()], HORIZONTAL_ALIGNMENT_CENTER, G.FIELD_W, 12, Color(1, 1, 1, 0.6))
 	# 符卡按钮

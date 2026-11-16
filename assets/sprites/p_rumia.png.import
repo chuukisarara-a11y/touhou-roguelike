@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ot2n41g8o1tq"
-path="res://.godot/imported/daiyousei.png-6ac7e5298d37a425bce70801ee37f1cf.ctex"
+uid="uid://3e7wcvxwqo4r"
+path="res://.godot/imported/p_rumia.png-d5a15cb68d4bb90166a54fcee952a206.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/daiyousei.png"
-dest_files=["res://.godot/imported/daiyousei.png-6ac7e5298d37a425bce70801ee37f1cf.ctex"]
+source_file="res://assets/sprites/p_rumia.png"
+dest_files=["res://.godot/imported/p_rumia.png-d5a15cb68d4bb90166a54fcee952a206.ctex"]
 
 [params]
 

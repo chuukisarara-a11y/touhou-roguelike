@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bxn31rflgldoc"
-path="res://.godot/imported/cirno.png-a94212084e03e71db176bb79a2f116f5.ctex"
+uid="uid://dva5xtmqtdop0"
+path="res://.godot/imported/p_nitori.png-c6ebff405fb0d02138980df97091e18b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/cirno.png"
-dest_files=["res://.godot/imported/cirno.png-a94212084e03e71db176bb79a2f116f5.ctex"]
+source_file="res://assets/sprites/p_nitori.png"
+dest_files=["res://.godot/imported/p_nitori.png-c6ebff405fb0d02138980df97091e18b.ctex"]
 
 [params]
 
