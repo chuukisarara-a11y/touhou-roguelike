@@ -60,12 +60,14 @@ func _next_line() -> void:
 	if _ti < _talk.size():
 		var who: String = _talk[_ti][0]
 		_line.text = (_talk[_ti][1] if who == "旁白" else "%s：「%s」" % [who, _talk[_ti][1]])
+		UI.fit(_line, 60.0)
 		_line.visible_ratio = 0.0
 		_line.create_tween().tween_property(_line, "visible_ratio", 1.0, 0.3)
 		return
 	_next_btn.queue_free()
 	_next_btn = null
 	_line.text = "要怎么做？"
+	UI.fit(_line, 60.0)
 	_line.visible_ratio = 1.0
 	var y: float = 130.0
 	_res_y = y
@@ -152,6 +154,8 @@ func _choose(ch: Dictionary) -> void:
 	if lines.is_empty():
 		lines.append("什么也没有得到。" if ch.has("alt") else "……")
 	_line.text = ch.get("say", "")
+	UI.fit(_line, 20.0)
+	_res_y = maxf(_res_y, _line.position.y + UI.text_h(_line.text, _line.size.x, 10) + 6.0)
 	for b in _buttons:
 		b.queue_free()
 	_buttons.clear()

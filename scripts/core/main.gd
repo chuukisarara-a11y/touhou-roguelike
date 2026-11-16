@@ -33,7 +33,7 @@ func _ready() -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cl.add_child(_fade)
 	goto("title")
-	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest"]:   # 开发用的自动测试脚本
+	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest"]:   # 开发用的自动测试脚本
 		if OS.get_cmdline_user_args().has("--" + tn.trim_prefix("_")):
 			add_child(load("res://tools/%s.gd" % tn).new())
 
@@ -175,5 +175,9 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		G.save_meta()
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		var ovs := get_tree().get_nodes_in_group("overlay").filter(func(o): return not o.is_queued_for_deletion())
+		if not ovs.is_empty() and not get_tree().paused:   # 返回键先关最上面的弹出层
+			ovs[-1].queue_free()
+			return
 		if screen != null and screen.has_method("on_back"):
 			screen.on_back()

@@ -36,6 +36,16 @@ func _ready() -> void:
 		[0.6, func(): snap("bag_skill")],
 		[0.1, func():
 			for o in get_tree().get_nodes_in_group("overlay"): o.queue_free()
+			G.run.money = 300; G.run.pos = 0
+			G.main.goto("shop")],
+		[0.8, func(): snap("shop"); G.main.screen._detail(G.main.screen.items[3])],
+		[0.6, func(): snap("shop_detail")],
+		[0.1, func():
+			for o in get_tree().get_nodes_in_group("overlay"): o.queue_free()
+			G.main.screen.tab = 3; G.main.screen._show()],
+		[0.5, func(): snap("shop_up"); G.main.goto("rest")],
+		[0.7, func():
+			snap("rest")
 			G.main.goto("reward", {"kind": "battle", "no_hit": false, "earned": 20})],
 		[0.8, func(): snap("reward"); G.main.goto("map")],
 		[0.5, func(): G.main.enter_node(G.main.screen.reachable()[0])],

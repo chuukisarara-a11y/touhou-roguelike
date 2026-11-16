@@ -43,13 +43,28 @@ static func install_theme(root: Window) -> void:
 	th.set_color("font_disabled_color", "Button", Color(0.45, 0.43, 0.55))
 	root.theme = th
 
-## 文字按给定宽度任意断行后的高度（略偏保守，宁高勿低）
+## 文字按给定宽度断行后的高度（用和 Label 相同的断行方式实际排一遍，保证不会算少）
 static func text_h(text: String, width: float, size := 12) -> float:
-	var lines := 0.0
-	for par in text.split("\n"):
-		var w := G.font.get_string_size(par, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-		lines += maxf(1.0, ceilf(w / (width - 4.0)))
-	return lines * (G.font.get_height(size) + 2.0)
+	var f: Font = G.font10 if size <= 10 else G.font
+	var tp := TextParagraph.new()
+	tp.width = maxf(8.0, width)
+	tp.break_flags = TextServer.BREAK_MANDATORY | TextServer.BREAK_GRAPHEME_BOUND
+	tp.add_string(text, f, size)
+	return maxi(1, tp.get_line_count()) * (f.get_height(size) + 2.0)
+
+## 字号自适应：12 号字放不进 max_h 就换成 10 号字；返回实际高度
+static func fit(l: Label, max_h: float) -> float:
+	var w: float = l.size.x
+	var hh := text_h(l.text, w, 12)
+	if hh > max_h:
+		l.add_theme_font_override("font", G.font10)
+		l.add_theme_font_size_override("font_size", 10)
+		hh = text_h(l.text, w, 10)
+	else:
+		l.add_theme_font_override("font", G.font)
+		l.add_theme_font_size_override("font_size", 12)
+	l.size.y = maxf(l.size.y, hh)
+	return hh
 
 static func label(parent: Node, text: String, y: float, size := 12, color := Color.WHITE, x := 0.0, w := -1.0) -> Label:
 	var l := Label.new()
@@ -61,6 +76,8 @@ static func label(parent: Node, text: String, y: float, size := 12, color := Col
 	l.size = Vector2(width, text_h(text, width, size))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", size)
+	if size <= 10:
+		l.add_theme_font_override("font", G.font10)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_constant_override("line_spacing", 2)
 	parent.add_child(l)
@@ -205,6 +222,14 @@ class Overlay extends CanvasLayer:
 		if title != "":
 			UI.label(panel, title, y, 12, Color(1, 0.85, 0.55))
 			y += 22.0
+	## 弹出层打开时，触摸不再传给下面的界面（地图、对话等用 _unhandled_input 的界面）
+	func _unhandled_input(ev: InputEvent) -> void:
+		if ev is InputEventScreenTouch or ev is InputEventScreenDrag or ev is InputEventMouseButton:
+			get_viewport().set_input_as_handled()
+	## 右上角的关闭键
+	func add_close() -> void:
+		var b := UI.button(panel, "×", 3, close, 20.0, false, {}, G.FIELD_W - 32, 24)
+		b.z_index = 5
 	func add_label(text: String, color := Color(0.9, 0.9, 1.0)) -> Label:
 		var l := UI.label(panel, text, y, 12, color, 12)
 		y += l.size.y + 6.0
@@ -342,7 +367,9 @@ class Card extends Control:
 		var bgk := "atk"
 		var border := Color(0.8, 0.6, 1.0)
 		var d := {}
-		if kind != "weapon":
+		if kind == "util":
+			d = {"g": id, "rar": 0}
+		elif kind != "weapon":
 			d = Db.SKILLS[id] if kind == "skill" else Db.RELICS[id]
 			bgk = UI.ARCH_KEY.get(d.get("arch", ""), "misc")
 			border = UI.RAR_COL[d.rar]

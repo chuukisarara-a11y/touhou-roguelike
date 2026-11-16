@@ -15,7 +15,9 @@ func _ready() -> void:
 	UI.set_disabled(b, G.run.hearts >= G.run.max_hearts)
 	var b2 := UI.button(self, "祈愿（强化一张符札）", 168, _pick_upgrade, 30.0)
 	UI.set_disabled(b2, G.upgradable().is_empty())
-	UI.button(self, "直接离开", 202, func(): G.main.node_done(), 24.0)
+	var b3 := UI.button(self, "遗忘一张秘符（不占用休息）", 202, _pick_forget, 24.0)
+	UI.set_disabled(b3, G.run.skills.is_empty())
+	UI.button(self, "直接离开", 230, func(): G.main.node_done(), 24.0)
 
 func _pick_upgrade() -> void:
 	_stage = 1
@@ -30,6 +32,17 @@ func _pick_upgrade() -> void:
 			G.apply_card(c)
 			G.main.node_done(), 36.0, true, G.card_icon(c))
 		y += b.size.y + 4
+
+func _pick_forget() -> void:
+	var ov := UI.Overlay.new("遗忘哪一张秘符？", 44.0 + G.run.skills.size() * 28.0 + 30.0)
+	add_child(ov)
+	for sid in G.run.skills:
+		var id: String = sid
+		ov.add_button("%s　%s" % [Db.SKILLS[id].name, Db.SKILLS[id].desc], func():
+			G.remove_skill(id)
+			ov.close()
+			G.main.goto("rest"))
+	ov.add_button("算了", func(): ov.close())
 
 func bot_step() -> void:
 	if G.run.hearts < G.run.max_hearts:

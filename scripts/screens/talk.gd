@@ -59,6 +59,7 @@ func _say(who: String, text: String) -> void:
 	var is_me := who == "reimu"
 	_name.text = "博丽灵梦" if is_me else Db.BOSSES[boss_id].name
 	_text.text = text
+	UI.fit(_text, 62.0)
 	_text.visible_ratio = 0.0
 	_text.create_tween().tween_property(_text, "visible_ratio", 1.0, minf(0.6, text.length() * 0.025))
 	_left.create_tween().tween_property(_left, "modulate", Color.WHITE if is_me else Color(0.45, 0.45, 0.55), 0.15)

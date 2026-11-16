@@ -16,6 +16,7 @@ var main
 var run := {}
 var rng := RandomNumberGenerator.new()
 var font: Font
+var font10: Font   # 小一号的像素字体（文字放不下时用）
 var _tex := {}
 
 # ---------- 常驻数据（设置、立绘解锁、开发者模式）与局内存档 ----------
@@ -41,6 +42,7 @@ func _ready() -> void:
 	touch_mode = OS.has_feature("mobile")
 	bot = OS.get_cmdline_user_args().has("--autotest")
 	font = load("res://assets/fonts/fusion12.ttf")
+	font10 = load("res://assets/fonts/fusion10.ttf")
 	rng.randomize()
 	load_meta()
 
@@ -164,6 +166,11 @@ func give_shard(ch: int) -> bool:
 ## 是否持有某个宝具或秘符（效果代码统一用这个判断）
 func has(id: String) -> bool:
 	return run.relics.has(id) or run.skills.has(id)
+
+func remove_skill(id: String) -> void:
+	run.skills.erase(id)
+	if id == "razor":   # 剃刀边缘被遗忘：心的上限恢复
+		run.max_hearts = maxi(1, 5 + (1 if has("charm") else 0) - (2 if has("greed") else 0))
 
 func add_skill(id: String) -> void:
 	if id == "" or has(id):

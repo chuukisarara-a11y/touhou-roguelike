@@ -27,7 +27,8 @@ static func open(parent: Node) -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		y += l.size.y + 8
 	sc.content_h = y
-	var b := UI.button(ov.panel, "关闭", h - 16.0 - 28, func(): ov.close(), 22.0)
+	ov.add_close()
+	UI.button(ov.panel, "关闭", h - 16.0 - 30, func(): ov.close(), 26.0)
 
 static func _section(sc: UI.Scroll, ov: UI.Overlay, title: String, items: Array, y: float) -> float:
 	var l := UI.label(sc.content, title, y, 12, Color(1, 0.85, 0.55), 10)
@@ -46,7 +47,7 @@ static func _section(sc: UI.Scroll, ov: UI.Overlay, title: String, items: Array,
 		c.position = Vector2(cx + 4, cy)
 		sc.content.add_child(c)
 		var nl := UI.label(sc.content, item_name(kind, id), cy + 50, 12, Color(0.92, 0.9, 1.0), cx - 1, 46)
-		nl.clip_text = true
+		UI.fit(nl, 14.0)
 		sc.add_tap(Rect2(cx, cy, 46, 78), func(): detail(ov, kind, id))
 	return y + ceilf(items.size() / 4.0) * 82 + 2
 
@@ -89,4 +90,5 @@ static func detail(parent: Node, kind: String, id: String) -> void:
 	ov.y += 18
 	var l := ov.add_label(text)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	ov.add_button("关闭", func(): ov.close(), 22.0)
+	ov.add_close()
+	ov.add_button("关闭", func(): ov.close(), 26.0)
