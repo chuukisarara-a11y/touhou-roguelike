@@ -283,3 +283,4 @@
    重装时自动恢复。现在的 APK 里 allowBackup=false（Godot 默认关），只需在 export_presets.cfg 打开 `user_data_backup/allow=true`。
    前提：手机要有 Google 服务并登录 Google 账号、系统设置里开着备份。可能丢最近一天以内的进度；侧载安装能否在重装时自动恢复需真机验证。
    建议：自动备份 + 存档码两者都做（存档码兜底，也给 PC 版用）。
+   【用户已定】自动备份 + 存档码两者都做（他的手机有 Google 服务；给别人试玩的手机不一定有，存档码兜底）。
