@@ -31,6 +31,9 @@ func _ready() -> void:
 	if info.get("shard", false):
 		UI.label(self, "获得境界碎片（%d/3）" % G.run.shards, y, 12, Color(0.85, 0.6, 1.0))
 		y += 16
+		if info.has("shard_say"):
+			var sl := UI.label(self, info.shard_say, y, 12, Color(0.8, 0.7, 1.0), 10)
+			y += sl.size.y + 6
 	if info.kind == "elite":
 		var rid := G.roll_relic(0, 1)
 		if rid != "":

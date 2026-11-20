@@ -9,6 +9,7 @@
 - 每个版本都要打 APK 发给用户（他在安卓手机上试玩，然后给反馈）。
 - **音乐只能是东方原曲的改编，绝对不能自己作曲，也不能由模型自己写出 ZUN 的旋律。**
   流程：用户自己扒谱写旋律 MIDI → 放到 `assets/music/src/<槽位>.mid` → 用 `tools/chiptune.py` 编成 8-bit 风格 → `assets/music/<槽位>.ogg`。
+  **编曲方针（2026-11-19）：保留主旋律，尽量多加乐器、丰富听感**（chiptune.py 已升级），每首曲子的命令记在 README 的表里。
   槽位见 `assets/music/README.md`（title 已完成；map、battleN、bossN、result、gameover 待补，缺的槽位静音）。
 - 设计原则（用户反复强调过）：
   - Boss 符卡不求多，要**密、要华丽**；固定弹道要带一点随机，不能有一条直线就能穿过去的缝。

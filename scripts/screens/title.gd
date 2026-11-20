@@ -32,7 +32,7 @@ func _ready() -> void:
 	y += 26
 	UI.button(self, "游戏说明", y, func(): UI.tutorial(self), 23.0, false, {}, 8.0, hw)
 	UI.button(self, "设置", y, func(): UI.open_settings(self), 23.0, false, {}, 12.0 + hw, hw)
-	UI.label(self, "东方Project 同人作品　v0.13", h - 16, 12, Color(0.55, 0.53, 0.7))
+	UI.label(self, "东方Project 同人作品　v0.14", h - 16, 12, Color(0.55, 0.53, 0.7))
 
 func _new_game() -> void:
 	if G.has_save():
@@ -66,10 +66,29 @@ func _ask_pass() -> void:
 		else:
 			Au.sfx("click")
 			ov.close()
+			if le.text.strip_edges() != "":
+				_moon_reply()
 	le.text_submitted.connect(func(_t): submit.call())
 	ov.add_button("确定", submit)
 	ov.add_button("算了", func(): ov.close())
 	le.grab_focus()
+
+## 输错口令：月亮淡淡地回一句
+func _moon_reply() -> void:
+	var l := ColorRect.new()   # 半透明底，叠在立绘上也看得清
+	l.color = Color(0.05, 0.03, 0.12, 0.75)
+	l.size = Vector2(136, 18)
+	l.position = Vector2((G.FIELD_W - 136) / 2.0, _moon.y + 26.0)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.z_index = 10
+	add_child(l)
+	UI.label(l, "月亮并不理解你的想法", 3, 12, Color(0.88, 0.88, 1.0), 0, 136)
+	l.modulate.a = 0.0
+	var tw := l.create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.5).from(0.0)
+	tw.tween_interval(1.6)
+	tw.tween_property(l, "modulate:a", 0.0, 0.8)
+	tw.tween_callback(l.queue_free)
 
 func on_back() -> void:
 	get_tree().quit()

@@ -23,6 +23,40 @@ var _fade: ColorRect
 var _cl: CanvasLayer
 var _toasts := 0
 
+## 章节过场：屏幕中间渐显再渐隐「第二幕　红魔馆」
+func chapter_card(n: int) -> void:
+	var nm: String = G.chap(n).name
+	var parts := nm.split(" ", false, 1)
+	var big: String = parts[0].replace("章", "幕")
+	var sub: String = parts[1] if parts.size() > 1 else ""
+	var hh := G.field_h()
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.size = Vector2(G.FIELD_W, hh)
+	var bg := ColorRect.new()
+	bg.color = Color(0.02, 0.0, 0.06, 0.6)
+	bg.size = root.size
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(bg)
+	var cy := hh * 0.42
+	var l1 := UI.label(root, big, cy - 26, 12, Color(1.0, 0.88, 0.62), 0, G.FIELD_W / 2.0)
+	l1.scale = Vector2(2, 2)   # 像素字放大两倍，保持清晰
+	var line := ColorRect.new()
+	line.color = Color(1.0, 0.85, 0.6, 0.7)
+	line.position = Vector2(G.FIELD_W * 0.2, cy + 9)
+	line.size = Vector2(G.FIELD_W * 0.6, 1)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(line)
+	UI.label(root, sub, cy + 15, 12, Color(0.92, 0.88, 1.0))
+	_cl.add_child(root)
+	root.modulate.a = 0.0
+	var tw := root.create_tween()
+	tw.tween_property(root, "modulate:a", 1.0, 0.8)
+	tw.parallel().tween_property(line, "size:x", G.FIELD_W * 0.6, 0.8).from(0.0)
+	tw.tween_interval(1.5)
+	tw.tween_property(root, "modulate:a", 0.0, 1.0)
+	tw.tween_callback(root.queue_free)
+
 ## 屏幕顶部的提示条（成就达成等）
 func toast(text: String) -> void:
 	var bg := ColorRect.new()
@@ -102,6 +136,7 @@ func start_run(ch := "reimu", asc_lv := 0) -> void:
 	G.meta.runs += 1
 	G.save_meta()
 	goto("map")
+	chapter_card(1)
 
 func continue_run() -> void:
 	if G.load_run():
@@ -172,6 +207,11 @@ func battle_done(info: Dictionary) -> void:
 				info["shard"] = true
 			else:
 				info["shard_miss"] = true
+		if run.chapter == 2 and not run.sh[1]:   # 第二章：打赢 2 场精英
+			run["elites_ch"] = run.get("elites_ch", 0) + 1
+			if run.elites_ch >= 2 and G.give_shard(2):
+				info["shard"] = true
+				info["shard_say"] = "紫：「两次都赢了呢。这片碎片，就当是给你的奖赏吧。」"
 		if G.has("elite_hunter"):
 			run.money += 40
 			info.earned += 40
@@ -190,6 +230,7 @@ func node_done() -> void:
 		if ch < 3 or (ch == 3 and G.run.shards >= 3):
 			G.next_chapter()
 			goto("map")
+			chapter_card(G.run.chapter)
 		else:
 			goto("result", {"win": true, "true_end": ch == 4})
 	else:

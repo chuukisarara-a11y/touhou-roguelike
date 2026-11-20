@@ -345,13 +345,17 @@ static func run(e, id: String, dt: float, b) -> void:
 					bl.col = 0 if n2 % 2 == 0 else 4
 					bl.tag = "sa"
 					bl.go_spread = randf_range(-0.2, 0.2)
-		"kagu1":  # 难题「佛御石之钵」：三道激光从一侧扫过下方约 3/5 后消失（每轮换边）；
-			# 稀疏的固定弹道与激光反方向旋转，另有少量缓慢的自机狙
+		"kagu1":  # 难题「佛御石之钵」：三条激光互成 120°（风车），一起转约 65° 后消失，每轮换方向、起始角随机；
+			# 稀疏的固定弹道与激光反向旋转，另有少量缓慢的自机狙
 			if not e.tm.has("_las"):
 				e.tm["_las"] = 0.8
-			if every(e, "_las", 8.0, dt):
+			if every(e, "_las", 7.0, dt):
 				e.tm["ld"] = -e.tm.get("ld", -1.0)
-				sweep_lasers(b, e, e.tm["ld"], 3, 0.42, 0.32, 0, 1.3, 6.0)
+				var rs: float = 0.46 * e.tm["ld"]
+				var life3 := deg_to_rad(65.0) / absf(rs)
+				var a0 := randf() * TAU
+				for k in 3:
+					b.bullets.laser(P, a0 + k * TAU / 3.0, 520.0, 6.0, 1.2, life3, (k * 2) % 7, rs, e)
 			if every(e, "a", 0.3, dt):
 				var ld: float = e.tm.get("ld", 1.0)
 				for k in 3:

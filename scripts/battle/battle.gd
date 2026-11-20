@@ -315,6 +315,23 @@ func add_bomb(v: float) -> void:
 func graze_radius() -> float:
 	return player.graze_radius() * (1.0 + 0.08 * G.spirit_lv) * (1.5 if afterglow_t > 0.0 else 1.0)
 
+## 一次擦弹的符卡充能（随连击倍率，最多 ×3；吃剃刀边缘、红茶、余韵等加成）
+func graze_charge() -> float:
+	var mult := 1.0 + 0.08 * mini(graze_combo, 25)
+	return 0.02 * mult * (2.0 if G.has("razor") else 1.0) * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0)
+
+## 吃到 P 点：等于 3 次擦弹的充能
+func on_power() -> void:
+	add_bomb(graze_charge() * 3.0)
+	Au.sfx("graze", -2.0, 0.0, 1.5)
+
+## 掉钱：整体掉率只有原来的 30%（按概率取整）
+func drop_coins_scaled(pos: Vector2, n: int) -> void:
+	var f := n * 0.3
+	var k := int(f) + (1 if randf() < f - int(f) else 0)
+	if k > 0:
+		items.drop_coins(pos, k)
+
 ## 擦弹：连击越高充能越快；「御札返し」会顺手反击
 func on_graze(pos: Vector2) -> void:
 	graze_combo += 1
@@ -334,8 +351,7 @@ func on_graze(pos: Vector2) -> void:
 		var tg = shots.nearest(pos, enemies.list)
 		var dir: Vector2 = Vector2.UP if tg == null else (tg.pos - pos).normalized()
 		shots.spawn("amulet", pos, dir * 260.0, 16.0 * G.dmg_mult(), {"homing": 10.0, "rot": true})
-	var mult := 1.0 + 0.08 * mini(graze_combo, 25)
-	add_bomb(0.02 * mult * (2.0 if G.has("razor") else 1.0) * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0))
+	add_bomb(graze_charge())
 	Au.sfx("graze", -4.0, 0.0, 1.0 + 0.02 * mini(graze_combo, 30))
 	fx.spark(pos, Color(1, 1, 1))
 	if G.has("counter") and counter_cd <= 0.0:
@@ -365,7 +381,11 @@ func on_enemy_killed(e) -> void:
 	G.run.kills += 1
 	Au.sfx("bosskill" if e.is_boss else "kill", 0.0 if e.is_boss else -5.0)
 	fx.burst(e.pos, Color(0.6, 0.9, 1.0), 8 if not e.is_boss else 40, 18.0 if not e.is_boss else 50.0)
-	items.drop_coins(e.pos, e.coins)
+	drop_coins_scaled(e.pos, e.coins)
+	if e.is_boss:
+		items.drop_power(e.pos, 3)
+	elif randf() < 0.08:
+		items.drop_power(e.pos, 1)
 	add_bomb(0.015 * (2.0 if G.has("burst_cd") else 1.0))
 	if e.mech == "split" and e.split_lv > 0:
 		for sg in [-1.0, 1.0]:
@@ -390,8 +410,6 @@ func on_enemy_killed(e) -> void:
 			defeat_line = "%s：「%s」" % [e.def.name, Db.DEFEAT[e.kind]]
 		_clear_to_points()
 		shake = 0.4
-	elif G.run.hearts < G.run.max_hearts and randf() < 0.025:
-		items.drop_heart(e.pos)
 	if G.has("redtea"):
 		G.run.tea_kills += 1
 		if G.run.tea_kills >= 40:
@@ -408,7 +426,8 @@ func on_boss_phase(e) -> void:
 			en.gone = true
 	_clear_to_points()
 	fx.burst(e.pos, Color(1, 0.8, 0.9), 24, 40.0)
-	items.drop_coins(e.pos, 8)
+	drop_coins_scaled(e.pos, 8)
+	items.drop_power(e.pos, 3)
 	shake = 0.25
 	if e.phase_name() != "":
 		spell_bg.declare()

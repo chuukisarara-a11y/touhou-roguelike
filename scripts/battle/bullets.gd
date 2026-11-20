@@ -28,6 +28,7 @@ class Bullet:
 	var go_spread := 0.0
 	var drag := 0.0     # 减速（滞留弹用）
 	var life := 0.0     # 存活秒数（0 = 直到出屏）
+	var face := -PI / 2.0   # 朝向：随速度更新，停住时保持最后的方向（时停的刀不会全朝上）
 
 class Laser:
 	var o: Vector2
@@ -87,6 +88,8 @@ func add(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
 func raw(pos: Vector2, vel: Vector2, shape := 0, col := 0, tag := "") -> Bullet:
 	var b := Bullet.new()
 	b.pos = pos; b.vel = vel; b.spd = vel.length(); b.shape = shape; b.col = col; b.tag = tag
+	if vel != Vector2.ZERO:
+		b.face = vel.angle()
 	b.r = RADII[shape]
 	if list.size() + _new.size() < CAP:
 		_new.append(b)
@@ -137,6 +140,8 @@ func tick(dt: float, battle) -> void:
 		b.age += dt
 		if b.delay > 0.0:
 			if b.age < b.delay:
+				if b.hold != Vector2.ZERO:
+					b.face = b.hold.angle()
 				continue
 			b.vel = b.hold
 			b.delay = 0.0
@@ -157,6 +162,8 @@ func tick(dt: float, battle) -> void:
 			b.vel += b.acc * dt
 			if b.maxs > 0.0 and b.vel.length() > b.maxs:
 				b.vel = b.vel.normalized() * b.maxs
+		if b.vel.length_squared() > 0.000001:
+			b.face = b.vel.angle()
 		b.pos += b.vel * dt
 		if b.bounce > 0 and ((b.pos.x < 2 and b.vel.x < 0) or (b.pos.x > G.FIELD_W - 2 and b.vel.x > 0)):
 			b.vel.x = -b.vel.x
@@ -270,7 +277,7 @@ func _draw() -> void:
 			a *= 0.45 + 0.55 * absf(sin(b.age * 14.0))
 		var mod := Color(1, 1, 1, a)
 		if b.shape in ROT_SHAPES:
-			draw_set_transform(b.pos, (b.vel.angle() if b.vel != Vector2.ZERO else -PI / 2.0) + PI / 2.0, Vector2.ONE)
+			draw_set_transform(b.pos, b.face + PI / 2.0, Vector2.ONE)
 			draw_texture_rect_region(_atlas, rect, src, mod)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		elif b.shape == 4:

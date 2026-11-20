@@ -1,4 +1,5 @@
 class_name UI
+static var overlay_closed_ms := -100000   # 最近一次关闭弹出层的时间
 
 ## 立绘鉴赏的角色表：id → [名字, 介绍]
 const GALLERY := {
@@ -248,7 +249,10 @@ class Overlay extends CanvasLayer:
 		y += b.size.y + 4.0
 		return b
 	func close() -> void:
+		UI.overlay_closed_ms = Time.get_ticks_msec()
 		queue_free()
+	func _exit_tree() -> void:
+		UI.overlay_closed_ms = Time.get_ticks_msec()
 
 ## 游戏说明：一页一页翻。done 在看完（或关掉）后调用
 static func tutorial(parent: Node, page := 0, done := Callable()) -> void:
@@ -290,7 +294,7 @@ static func stepper(ov: Overlay, label: String, get_v: Callable, set_v: Callable
 
 ## 设置界面（标题、暂停菜单共用）
 static func open_settings(parent: Node) -> Overlay:
-	var ov := Overlay.new("设置", 196.0)
+	var ov := Overlay.new("设置", 252.0)
 	parent.add_child(ov)
 	var st: Dictionary = G.meta.settings
 	stepper(ov, "音乐音量", func(): return st.bgm, func(v):
@@ -303,9 +307,36 @@ static func open_settings(parent: Node) -> Overlay:
 		st.shake = not st.shake; UI.set_text(box[0], "画面震动：" + onoff.call("shake"))))
 	box.append(ov.add_button("松手慢动作：" + onoff.call("slowmo"), func():
 		st.slowmo = not st.slowmo; UI.set_text(box[1], "松手慢动作：" + onoff.call("slowmo"))))
+	ov.add_button("导出存档码（复制）", func(): _export_save(ov))
+	ov.add_button("导入存档码（粘贴）", func(): _import_save(ov))
 	ov.add_button("返回", func():
 		G.save_meta(); ov.close())
 	return ov
+
+static func _export_save(parent: Node) -> void:
+	G.save_meta()
+	DisplayServer.clipboard_set(G.export_code())
+	var ov := Overlay.new("已复制存档码", 150.0)
+	parent.add_child(ov)
+	ov.add_label("整个存档（图鉴、成就、解锁、当前这一局）已经复制到剪贴板。\n粘贴到备忘录或发给自己的微信保存好；重装游戏或换手机后，用「导入存档码」恢复。")
+	ov.add_button("知道了", func(): ov.close())
+
+static func _import_save(parent: Node) -> void:
+	var ov := Overlay.new("导入存档码", 170.0)
+	parent.add_child(ov)
+	var tip := ov.add_label("先把存档码复制到剪贴板，再点下面的按钮。\n注意：会覆盖现在的存档。")
+	ov.add_button("从剪贴板粘贴并导入", func():
+		var code := DisplayServer.clipboard_get()
+		confirm(ov, "确定用这串存档码覆盖现在的存档吗？", func():
+			var err: String = G.import_code(code)
+			if err == "":
+				Au.sfx("phase")
+				G.main.toast("存档已恢复")
+				G.main.goto("title")
+			else:
+				tip.text = err + "。\n请确认复制了完整的存档码。"
+				tip.add_theme_color_override("font_color", Color(1, 0.55, 0.55))))
+	ov.add_button("取消", func(): ov.close())
 
 ## 二次确认
 static func confirm(parent: Node, text: String, yes: Callable) -> void:
@@ -347,7 +378,8 @@ class Scroll extends Control:
 	func _blocked() -> bool:
 		return get_tree().get_nodes_in_group("overlay").filter(func(o): return not o.is_queued_for_deletion()).size() > _depth
 	func _input(ev: InputEvent) -> void:
-		if not is_visible_in_tree() or _blocked():
+		# 弹出层刚关掉的 0.35 秒内不接受点击：防止点「关闭」的那一下穿透到下面又打开别的东西
+		if not is_visible_in_tree() or _blocked() or Time.get_ticks_msec() - UI.overlay_closed_ms < 350:
 			_press = false
 			return
 		if ev is InputEventScreenTouch:

@@ -7,7 +7,11 @@ var maxb := 0
 var fps_min := 999
 func _ready() -> void:
 	G.dev_god = true
-	for id in (["alice", "patchouli_b"] if OS.get_cmdline_user_args().has("--few") else Db.BOSSES.keys()):
+	var ids: Array = Db.BOSSES.keys()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--only="):   # 例：--only=kaguya,sakuya
+			ids = Array(arg.trim_prefix("--only=").split(","))
+	for id in (["alice", "patchouli_b"] if OS.get_cmdline_user_args().has("--few") and ids.size() == Db.BOSSES.size() else ids):
 		for i in Db.BOSSES[id].phases.size():
 			queue.append([id, i])
 	_next()

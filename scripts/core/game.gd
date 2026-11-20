@@ -130,6 +130,48 @@ func load_run() -> bool:
 	resume = {"screen": d.get("screen", "map"), "arg": d.get("arg", {})}
 	return true
 
+# ---------- 存档码：把存档变成一串文字，方便备份到备忘录 / 微信，或换手机、换电脑 ----------
+const CODE_HEAD := "THYK1:"
+
+func export_code() -> String:
+	var d := {"v": 1, "meta": meta}
+	if has_save():
+		var f := FileAccess.open(RUN_PATH, FileAccess.READ)
+		if f != null:
+			d["run"] = f.get_var()
+	var raw := var_to_bytes(d)
+	return CODE_HEAD + str(raw.size()) + ":" + Marshalls.raw_to_base64(raw.compress(FileAccess.COMPRESSION_GZIP))
+
+## 读存档码：成功返回 ""，失败返回原因
+func import_code(code: String) -> String:
+	code = code.strip_edges().replace("\n", "").replace("\r", "").replace(" ", "")
+	var i := code.find(CODE_HEAD)
+	if i < 0:
+		return "这不是存档码"
+	code = code.substr(i + CODE_HEAD.length())
+	var parts := code.split(":", true, 1)
+	if parts.size() < 2 or not parts[0].is_valid_int():
+		return "存档码不完整"
+	var n := int(parts[0])
+	var z := Marshalls.base64_to_raw(parts[1])
+	if z.is_empty() or n <= 0 or n > 8000000:
+		return "存档码不完整"
+	var raw := z.decompress(n, FileAccess.COMPRESSION_GZIP)
+	if raw.size() != n:
+		return "存档码不完整（可能没复制全）"
+	var d = bytes_to_var(raw)
+	if not (d is Dictionary) or not d.has("meta") or not (d.meta is Dictionary):
+		return "存档码已损坏"
+	for k in d.meta:
+		meta[k] = d.meta[k]
+	save_meta()
+	clear_run()
+	if d.has("run") and d.run is Dictionary:
+		var f := FileAccess.open(RUN_PATH, FileAccess.WRITE)
+		if f != null:
+			f.store_var(d.run)
+	return ""
+
 func clear_run() -> void:
 	if has_save():
 		DirAccess.remove_absolute(RUN_PATH)
@@ -208,6 +250,7 @@ func next_chapter() -> void:
 	run.pos = -1
 	run.chapter_first = true
 	run.grazes_ch = 0
+	run["elites_ch"] = 0
 	run.map = MapGen.generate(run.chapter)
 
 ## 拿到第 ch 章的境界碎片（每章一片）

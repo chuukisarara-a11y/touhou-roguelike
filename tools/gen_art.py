@@ -495,6 +495,11 @@ g.save(os.path.join(OUT, "glow.png"))
 def b_point(d):
     d.poly([(3, 0), (6, 3.5), (3, 7), (0, 3.5)], (120, 230, 255)); d.poly([(3, 1.6), (4.4, 3.5), (3, 5.4), (1.6, 3.5)], WHITE)
 small("point", 6, 7, b_point)
+# P 点：红色方块 + 白色 P（和圆形敌弹、铜钱、灵点区分开）
+def b_power(d):
+    d.rect(0, 0, 8, 8, (150, 20, 30)); d.rect(0.6, 0.6, 7.4, 7.4, (235, 50, 60))
+    d.rect(2.4, 1.6, 3.6, 6.6, WHITE); d.rect(3.6, 1.6, 5.4, 2.6, WHITE); d.rect(5.0, 2.2, 5.9, 4.0, WHITE); d.rect(3.6, 3.8, 5.4, 4.8, WHITE)
+small("power", 8, 8, b_power)
 
 # 图标底板
 for name, c in (("tile_0", (70, 76, 110)), ("tile_1", (60, 110, 190)), ("tile_2", (200, 140, 40)), ("tile_w", (120, 60, 110))):

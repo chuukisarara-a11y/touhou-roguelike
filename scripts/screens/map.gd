@@ -14,7 +14,7 @@ const GAP_POS := Vector2(22, 46)
 
 ## 第二章：擦弹够多时，地图上会出现隙间
 func gap_open() -> bool:
-	return G.run.chapter == 2 and not G.run.sh[1] and G.run.grazes_ch >= GAP_NEED
+	return false   # 第二章的碎片改为打赢 2 场精英，隙间节点不再出现
 var t := 0.0
 var _info: Label
 var _bottom := 999.0
@@ -31,21 +31,49 @@ func _ready() -> void:
 		G.ach("allmax")
 	if G.run.shards >= 3:
 		G.ach("shards3")
-	var cl := UI.label(self, G.chap(G.run.chapter).name + ("　异变%d" % G.asc() if G.asc() > 0 else ""), 3, 12, Color(0.85, 0.8, 1.0), 52, 84)
+	var cl := UI.label(self, (G.chap(G.run.chapter).name if G.asc() == 0 else G.chap(G.run.chapter).name.get_slice(" ", 1) + "　异变%d" % G.asc()), 3, 12, Color(0.85, 0.8, 1.0), 52, 84)
 	cl.size.y = 0
 	UI.fit(cl, 14.0)
-	var ex := []
+	var ex := ""
 	if G.run.chapter <= 3:
-		var hint := ""
+		ex = "碎片 %d/3" % G.run.shards
 		if not G.run.sh[G.run.chapter - 1]:
-			hint = ["　毫发无伤地战胜强敌", "　在弹幕的缝隙间游走（擦弹 %d/%d）" % [mini(G.run.grazes_ch, GAP_NEED), GAP_NEED], "　竹林里有谁留下了问题"][G.run.chapter - 1]
-		ex.append("碎片 %d/3%s" % [G.run.shards, hint])
-	_info = UI.label(self, "".join(ex), h - 18, 12, Color(0.75, 0.68, 0.92), 4)
+			ex += "　" + shard_hint(G.run.chapter)
+		ex += "　ⓘ"
+	_info = UI.label(self, ex, h - 18, 12, Color(0.75, 0.68, 0.92), 4, G.FIELD_W - 8)
+	_info.autowrap_mode = TextServer.AUTOWRAP_OFF
+	UI.fit(_info, 14.0)
+	if ex != "":   # 点一下提示，看三片碎片各自的条件
+		var tb := Button.new()
+		tb.flat = true
+		tb.position = Vector2(0, h - 20)
+		tb.size = Vector2(G.FIELD_W, 20)
+		tb.pressed.connect(_shard_info)
+		add_child(tb)
 	UI.button(self, Bag.summary(), h - 46, func(): Bag.open(self), 24.0)
 	_bottom = h - 46 - 16.0
 	if G.meta.dev:
 		Dev.map_tools(self, h - 46 - 22)
 		_bottom -= 22.0
+
+static func shard_hint(ch: int) -> String:
+	match ch:
+		1: return "无伤打赢一场精英"
+		2: return "打赢两场精英（%d/2）" % mini(G.run.get("elites_ch", 0), 2)
+		3: return "竹林里的纸人在出题"
+	return ""
+
+func _shard_info() -> void:
+	var lines := ["前三章各藏着一片「境界碎片」，一局里集齐 3 片，打完第三章后会进入第四章。", ""]
+	var conds := ["第一章：被弹 0 次打赢一场精英战（失败了可以等下一场精英）", "第二章：在这一章里打赢 2 场精英（地图上必定有一条经过两个精英的路线）", "第三章：竹林事件里，纸人会问一个关于紫的问题，答对就能拿到"]
+	for i in 3:
+		lines.append(("★ " if G.run.sh[i] else "☆ ") + conds[i])
+	var txt := "\n".join(lines)
+	var ov := UI.Overlay.new("境界碎片 %d/3" % G.run.shards, UI.text_h(txt, G.FIELD_W - 24.0, 12) + 74.0)
+	add_child(ov)
+	var l := ov.add_label(txt)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	ov.add_button("知道了", func(): ov.close())
 
 func _menu() -> void:
 	var ov := UI.Overlay.new("菜单", 128.0)

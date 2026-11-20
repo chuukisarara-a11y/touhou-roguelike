@@ -19,8 +19,20 @@ static func build(chapter: int, floor_i: int, kind: String) -> Array:
 		var tmp: int = tpl[i]; tpl[i] = tpl[j]; tpl[j] = tmp
 	var waves := []
 	var used := []
+	# 小怪密度：第 2 章 ×3、第 3 章 ×4、第 4 章 ×4.5。多出来的部分用其他编队模板，按批次错开出场
+	var dens: float = [1.0, 1.0, 3.0, 4.0, 4.5][clampi(chapter, 1, 4)]
 	for i in 3:
 		var w := _template(tpl[i], f)
+		var extra := dens - 1.0
+		var c := 0
+		while extra > 0.0:
+			if extra < 1.0 and G.rng.randf() >= extra:
+				break
+			c += 1
+			for s0 in _template(tpl[(i + c * 2) % tpl.size()], f):
+				s0.t += c * 2.4
+				w.append(s0)
+			extra -= 1.0
 		if f >= 4:
 			w += _reds(2, 8.0)
 		# 机制小怪：第 1 层没有；之后每波一组，高层两组

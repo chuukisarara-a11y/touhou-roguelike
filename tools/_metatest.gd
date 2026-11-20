@@ -37,4 +37,14 @@ func _process(dt: float) -> void:
 			Bag.detail(ov, "weapon", "amulet")
 		10: shot("bagdetail"); print("LAYERS ", get_tree().get_nodes_in_group("overlay").map(func(o): return o.layer)); G.main.toast("成就达成：测试"); G.run.hearts = 1; G.main.goto("rest")
 		11: shot("rest"); G.heal(2); G.run["rest_used"] = G.main.screen._key(); G.main.goto("rest")
-		12: shot("rest2"); get_tree().quit()
+		12:
+			shot("rest2")
+			G.run.chapter = 2; G.run["elites_ch"] = 1; G.run.sh = [true, false, false]; G.run.shards = 1
+			G.main.goto("map")
+		13: shot("map_hint"); G.main.screen._shard_info()
+		14: shot("shard_info"); G.main.goto("map"); G.main.chapter_card(2)
+		15: pass
+		16: shot("chapter_card"); UI.open_settings(G.main.screen)
+		17: shot("settings"); G.main.goto("title"); G.main.screen._moon_reply()
+		18: pass
+		19: shot("moon"); get_tree().quit()
