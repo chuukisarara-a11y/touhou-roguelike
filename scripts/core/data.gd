@@ -99,6 +99,8 @@ const SKILLS := {
 	"m_borrow": {"chars": ["marisa"], "g": "借", "name": "借走不还", "rar": 0, "desc": "击破敌人时有 25% 概率多掉 1 钱"},
 	"m_power": {"chars": ["marisa"], "g": "火", "name": "火力至上", "rar": 2, "arch": "爆发", "desc": "攻符栏位 -1；所有攻符伤害 +50%"},
 	"watch": {"arch": "符卡", "g": "表", "name": "咲夜的怀表", "rar": 1, "desc": "发动符卡后敌弹减速3秒"},
+	"db_refund": {"arch": "符卡", "g": "决", "name": "决死结界", "rar": 1, "desc": "决死成功时返还用掉格数的一半，并在 4 秒内擦弹充能翻倍"},
+	"db_epic": {"arch": "符卡", "g": "死", "name": "背水之阵", "rar": 2, "desc": "决死窗口延长一倍；决死放出的符卡威力 ×1.5"},
 	"lantern": {"arch": "符卡", "g": "灯", "name": "人魂灯", "rar": 1, "desc": "被弹时获得一格符卡"},
 	"camera": {"arch": "符卡", "g": "机", "name": "天狗的相机", "rar": 1, "desc": "符卡消除的敌弹会变成钱"},
 	"counter": {"chars": ["reimu"], "arch": "擦弹", "g": "返", "name": "御札返し", "rar": 1, "desc": "擦弹时朝最近的敌人射出一张追踪符札"},
@@ -149,6 +151,7 @@ const ENEMIES := {
 	"m_sniper": {"tex": "@0", "hp": 50.0, "r": 7.0, "coins": 2, "atk": "snipe", "cd": 3.0, "mech": "sniper", "tint": Color(1.0, 0.7, 0.7)},
 	"m_guard": {"tex": "@2", "hp": 190.0, "r": 9.0, "coins": 5, "atk": "ring8", "cd": 2.6, "mech": "guard", "tint": Color(1.0, 0.9, 0.55)},
 	"m_runner": {"tex": "@0", "hp": 70.0, "r": 7.0, "coins": 10, "atk": "", "cd": 9.0, "mech": "runner", "tint": Color(1.0, 0.95, 0.5)},
+	"m_gap": {"tex": "@0", "hp": 80.0, "r": 7.0, "coins": 3, "atk": "fan3", "cd": 1.3, "mech": "gap", "tint": Color(0.85, 0.6, 1.0)},   # 终章：钻进隙间，从屏幕下方冲出来
 	"m_mirror": {"tex": "@0", "hp": 60.0, "r": 7.0, "coins": 2, "atk": "fan3", "cd": 1.3, "mech": "mirror", "tint": Color(0.6, 0.95, 1.0)},
 	# 第四章
 	"eye": {"tex": "eye", "hp": 44.0, "r": 7.0, "coins": 1, "atk": "burst3", "cd": 1.6},
@@ -212,7 +215,7 @@ const CHAPTERS := {
 	1: {"name": "第一章 雾之湖", "bg": "lake", "elites": ["rumia", "daiyousei"], "boss": "cirno", "mobs": ["fairy", "fairy_red", "bigfairy", "kedama"], "specials": ["m_split", "m_bomber", "m_runner", "m_shield"]},
 	2: {"name": "第二章 红魔馆", "bg": "mansion", "elites": ["meiling", "patchouli"], "boss": "sakuya", "mobs": ["maid", "book", "bigbook", "bat"], "specials": ["m_shield", "m_mine", "m_sniper", "m_runner", "m_bomber"]},
 	3: {"name": "第三章 迷途竹林", "bg": "bamboo", "elites": ["tewi", "reisen"], "boss": "kaguya", "mobs": ["rabbit", "bamboo", "bigghost", "ghost"], "specials": ["m_mirror", "m_sniper", "m_guard", "m_split", "m_mine"]},
-	4: {"name": "终章 境界的缝隙", "bg": "gap", "elites": ["ran"], "boss": "yukari", "mobs": ["eye", "shiki", "bigeye", "ghost"], "specials": ["m_shield", "m_mirror", "m_mine", "m_bomber", "m_guard", "m_sniper"]},
+	4: {"name": "终章 境界的缝隙", "bg": "gap", "elites": ["ran"], "boss": "yukari", "mobs": ["eye", "shiki", "bigeye", "ghost"], "specials": ["m_gap", "m_gap", "m_shield", "m_mirror", "m_mine", "m_bomber", "m_guard", "m_sniper"]},
 }
 
 ## 异变等级：通关后解锁下一级，每级在之前的基础上再加一条（按角色分别记录）
@@ -237,6 +240,7 @@ const ACH := {
 	"capture20": ["收藏家", "累计收取 20 张符卡"],
 	"timestop": ["我的世界", "收取幻世「The World」"],
 	"bomb3": ["憋个大的", "一次用掉 3 格符卡"],
+	"deathbomb": ["千钧一发", "第一次决死成功"],
 	"combo50": ["如履薄冰", "擦弹连击达到 50"],
 	"combo100": ["弹幕中的舞者", "擦弹连击达到 100"],
 	"rich": ["赛钱箱满了", "同时持有 500 钱"],
@@ -257,7 +261,7 @@ const TUTORIAL := [
 	["擦弹与符卡", "让敌弹贴着身体擦过去叫「擦弹」，会给符卡槽充能。连续擦弹有连击，连得越多充得越快。\n\n符卡槽可以存好几格。按下符卡会一次用掉所有存满的格——存得越多，放出来越强。\n\n符卡消掉的敌弹会变成青色的「灵点」，吸收后本场战斗的擦弹范围和伤害都会提高。\n\n小怪偶尔会掉红色的「P」，吃一个等于擦弹 3 次的充能。\n\n屏幕上方有一条淡淡的虚线「收取线」：飞到线上面，场上的道具会全部被吸过来。"],
 	["构筑", "攻符：会攻击的符札，最多 4 张，可以强化到 Lv3，还能装「改造」。\n\n秘符：不攻击、但改变打法的符札，最多带 6 张。按流派分为擦弹、符卡、爆发、使魔、低速等。\n\n宝具：以数值加成为主，从精英、Boss、商店和事件获得。\n\n战斗后的奖励是几选一。地图底部的「行囊」能随时查看手上的东西。"],
 	["地图", "每章 7 层加一个 Boss，路线自己选。\n\n战斗：打完选奖励。　精英：更难，掉宝具。\n事件：对话和选择，有赚有赔。\n商店：四个分页；每次进店有一张可以替换旧秘符的「交换」秘符。\n神社：回心或强化攻符（二选一），还能遗忘秘符。\n\n中途退出会自动存档，下次从「继续游戏」接着打。"],
-	["进阶", "Boss 的每张符卡都有限时，时间到会自动进入下一张。\n\n一张符卡期间不被弹、不放符卡就是「收取」，有额外奖励。\n\n前三章各藏着一片「境界碎片」，拿法都不一样，地图底部有提示。一局集齐 3 片才能见到幕后的人。\n\n通关后会解锁「异变等级」，每级多一条难度词条。"],
+	["进阶", "Boss 的每张符卡都有限时，时间到会自动进入下一张。\n\n一张符卡期间不被弹、不放符卡就是「收取」，有额外奖励。\n\n被弹的一瞬间画面会闪白、时间变慢：这时立刻按符卡，就能抵消这次被弹，叫「决死」。\n\n前三章各藏着一片「境界碎片」，拿法都不一样，地图底部有提示。一局集齐 3 片才能见到幕后的人。\n\n通关后会解锁「异变等级」，每级多一条难度词条。"],
 ]
 
 ## 角色。speed/dmg 是倍率；route 覆盖对应章节的名字、背景、精英和 Boss

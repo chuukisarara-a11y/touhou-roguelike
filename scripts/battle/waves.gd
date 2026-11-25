@@ -84,6 +84,8 @@ static func _special(id: String, t0: float) -> Array:
 			return [_hover(id, t0, W / 2.0 + r.randf_range(-20, 20), 72.0, 11.0)]
 		"m_runner":
 			return [{"t": t0, "kind": id, "move": {"type": "run", "dir": 1.0 if r.randf() < 0.5 else -1.0, "y": r.randf_range(50, 110)}}]
+		"m_gap":
+			return [{"t": t0, "kind": id, "move": {"type": "gapdive", "tx": r.randf_range(40, W - 40), "ty": r.randf_range(44, 70)}}]
 		"m_mirror":
 			return [{"t": t0, "kind": id, "move": {"type": "mirror", "tx": r.randf_range(40, W - 40), "ty": 56.0, "stay": 9.0}}]
 	return []

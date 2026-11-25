@@ -86,8 +86,10 @@ class Enemy:
 var list := []
 var _next_id := 1
 
+var diving := []   # 钻进隙间、正在屏幕下方预警的敌人（不在 list 里，打不到也碰不到）
+
 func alive() -> int:
-	return list.size()
+	return list.size() + diving.size()
 
 func spawn(kind: String, move: Dictionary, hp_mult: float, opts := {}) -> Enemy:
 	var e := Enemy.new()
@@ -110,7 +112,7 @@ func spawn(kind: String, move: Dictionary, hp_mult: float, opts := {}) -> Enemy:
 	e.radius *= e.scale / d.get("scale", 1.0)
 	e.max_hp = d.hp * hp_mult * G.DIFF_HP * G.asc_hp() * opts.get("hp_k", 1.0); e.hp = e.max_hp
 	match move.type:
-		"hover", "mirror":
+		"hover", "mirror", "gapdive":
 			e.pos = Vector2(move.tx + randf_range(-20, 20), -12)
 			e.stay = move.get("stay", 8.0)
 		"orbit":
@@ -144,8 +146,11 @@ func spawn_boss(bid: String, hp_mult: float) -> Enemy:
 	list.append(e)
 	return e
 
+var _h := 356.0
+
 func tick(dt: float, battle) -> void:
 	var h: float = battle.field_h
+	_h = h
 	var pp: Vector2 = battle.player.position
 	# 护盾（数使魔）与护卫（附近敌人减伤）
 	for e in list:
@@ -182,7 +187,23 @@ func tick(dt: float, battle) -> void:
 			_tick_mob(e, edt, h, battle)
 		if battle.state == "play" and e.pos.distance_squared_to(pp) < (e.radius + 2.0) * (e.radius + 2.0):
 			battle.player_hit()
-	list = list.filter(func(e): return not e.dead and not e.gone)
+	# 钻进隙间的敌人：从 list 拿出来，预警结束后从屏幕下方冲出
+	for e in list:
+		if e.mphase == 3 and not e.dead and not e.gone:
+			diving.append(e)
+	list = list.filter(func(e): return not e.dead and not e.gone and e.mphase != 3)
+	for e in diving:
+		e.tm.warn -= dt
+		if e.tm.warn <= 0.0:
+			e.pos = Vector2(e.tm.wx, h + 12.0)
+			e.vel = Vector2(0, -190.0)
+			e.mphase = 4
+			list.append(e)
+			battle.fx.burst(Vector2(e.tm.wx, h - 4.0), Color(0.8, 0.45, 1.0), 22, 40.0)
+			Au.sfx("warn", -6.0)
+			for k in 10:   # 冲出来时撒一圈慢弹
+				battle.bullets.add(Vector2(e.tm.wx, h - 6.0), Vector2.from_angle(PI + k * PI / 9.0) * 46.0, 0, 5)
+	diving = diving.filter(func(e): return e.mphase == 3)
 	queue_redraw()
 
 func _tick_mob(e: Enemy, dt: float, h: float, battle) -> void:
@@ -229,6 +250,38 @@ func _tick_mob(e: Enemy, dt: float, h: float, battle) -> void:
 					e.pos.y -= 60.0 * dt
 					if e.pos.y < -14:
 						e.gone = true
+	if e.move.type == "gapdive":   # 隙间型：在上方停一会儿 → 沉进隙间 → 下方预警 1 秒 → 从下往上冲出来
+		match e.mphase:
+			0:
+				e.pos = e.pos.move_toward(Vector2(e.move.tx, e.move.ty), 80.0 * dt)
+				if e.pos.distance_to(Vector2(e.move.tx, e.move.ty)) < 1.0:
+					e.mphase = 1
+					e.stay = 2.2
+			1:
+				e.stay -= dt
+				can_shoot = true
+				if e.stay <= 0.0:
+					e.mphase = 2
+					e.tm["sink"] = 0.5
+			2:
+				e.tm.sink -= dt
+				if e.tm.sink <= 0.0:
+					battle.fx.burst(e.pos, Color(0.8, 0.45, 1.0), 14, 26.0)
+					e.tm["wx"] = clampf(pp.x + randf_range(-26.0, 26.0), 18.0, G.FIELD_W - 18.0)
+					e.tm["warn"] = 1.0
+					e.mphase = 3
+			4:
+				e.vel.y = move_toward(e.vel.y, -18.0, 150.0 * dt)
+				e.pos += e.vel * dt
+				if e.pos.y < h * 0.5:
+					e.mphase = 5
+					e.stay = 1.8
+			5:
+				e.stay -= dt
+				can_shoot = true
+				e.pos.y -= (0.0 if e.stay > 0.0 else 70.0) * dt
+				if e.pos.y < -14:
+					e.gone = true
 	if e.move.type == "hover":
 		match e.mphase:
 			0:
@@ -271,7 +324,24 @@ func _tick_boss(e: Enemy, dt: float, battle) -> void:
 		return
 	Pat.boss(e, e.phases[e.phase_i].pat, dt, battle)
 
+## 下方的隙间预警：闪烁的裂缝 + 红色感叹号 + 冲出路线
+func _draw_dive_warn(h: float) -> void:
+	for e in diving:
+		var x: float = e.tm.wx
+		var k: float = 1.0 - e.tm.warn          # 0 → 1，越接近冲出越明显
+		var blink: float = 0.55 + 0.45 * absf(sin(e.tm.warn * 18.0))
+		draw_rect(Rect2(x - 7, h * 0.5, 14, h * 0.5), Color(1, 0.2, 0.3, 0.06 + 0.1 * k))
+		draw_set_transform(Vector2(x, h - 8), 0, Vector2(1, 0.32))
+		var rr := 8.0 + 8.0 * k
+		draw_circle(Vector2.ZERO, rr, Color(0.12, 0.0, 0.2, 0.95))
+		draw_arc(Vector2.ZERO, rr, 0, TAU, 28, Color(0.9, 0.5, 1.0, blink), 2.5)
+		draw_set_transform(Vector2.ZERO)
+		var red := Color(1, 0.25, 0.3, blink)
+		draw_rect(Rect2(x - 1.5, h - 40, 3, 11), red)
+		draw_rect(Rect2(x - 1.5, h - 26, 3, 3), red)
+
 func _draw() -> void:
+	_draw_dive_warn(_h)
 	for e in list:
 		var tn: String = e.tex if not e.is_boss else e.def.tex
 		if (e.anim if not e.is_boss else e.def.get("anim", false)):
@@ -291,7 +361,14 @@ func _draw() -> void:
 			draw_arc(e.pos, e.radius + 3.0, 0, TAU, 20, Color(1.0, 0.85, 0.4, 0.8), 1.0)
 		if e.mech == "bomber":
 			draw_circle(e.pos, e.radius + 2.0 + sin(e.t * 12.0) * 1.5, Color(1, 0.3, 0.3, 0.25))
+		if e.mech == "gap" and e.mphase == 2:   # 正在沉进隙间
+			draw_set_transform(e.pos + Vector2(0, 6), 0, Vector2(1, 0.3))
+			draw_circle(Vector2.ZERO, 14.0, Color(0.15, 0.0, 0.25, 0.9))
+			draw_arc(Vector2.ZERO, 14.0, 0, TAU, 24, Color(0.85, 0.5, 1.0), 2.0)
+			draw_set_transform(Vector2.ZERO)
 		var c: Color = e.tint
+		if e.mech == "gap" and e.mphase == 2:
+			c.a = clampf(e.tm.sink / 0.5, 0.0, 1.0)
 		if e.flash > 0.0:
 			c = Color(4, 4, 4)
 		elif e.burn_t > 0.0:

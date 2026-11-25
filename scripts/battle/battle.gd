@@ -51,6 +51,9 @@ var timestop := 0.0      # 时间停止剩余秒数（咲夜）：期间除 Boss
 var ts_real := 0.0
 var _ts: ColorRect
 var _dim: ColorRect
+var _dbf: ColorRect      # 决死窗口的白闪
+var db_t := 0.0          # 决死窗口剩余时间（真实秒）
+var db_power := 1.0      # 这次符卡是决死放出的：威力倍率
 var _bt := 0.0
 
 func setup(arg: Dictionary) -> void:
@@ -95,6 +98,11 @@ func _ready() -> void:
 	_ts.size = Vector2(G.FIELD_W, field_h)
 	_ts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_ts)
+	_dbf = ColorRect.new()
+	_dbf.color = Color(1, 1, 1, 0.0)
+	_dbf.size = Vector2(G.FIELD_W, field_h)
+	_dbf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_dbf)
 	hud = Hud.new(); add_child(hud); hud.setup(self)
 	var hp_mult: float = (1.0 + (G.run.floor - 1) * 0.07) * pow(1.55, G.run.chapter - 1)
 	waves = Waves.build(G.run.chapter, G.run.floor, kind)
@@ -143,6 +151,14 @@ func _process(real_dt: float) -> void:
 		elif move_finger != -1:
 			slow_budget = minf(slow_max(), slow_budget + real_dt * 1.5)
 	var dt := real_dt * (SLOW_SCALE if slowmo_active else 1.0)
+	# 决死窗口：时间放慢到 30%，画面闪白；窗口内按符卡就抵消这次被弹
+	_dbf.color.a = move_toward(_dbf.color.a, 0.0, real_dt * 2.4)
+	if db_t > 0.0:
+		db_t -= real_dt
+		dt = real_dt * 0.3
+		_dbf.color.a = maxf(_dbf.color.a, 0.18 + 0.12 * absf(sin(db_t * 40.0)))
+		if db_t <= 0.0:
+			_apply_hit()
 	_dim.color.a = move_toward(_dim.color.a, 0.12 if slowmo_active else 0.0, real_dt * 0.8)
 	if G.bot:
 		_bt += dt
@@ -466,6 +482,27 @@ func player_hit() -> void:
 		bullets.clear_near(player.position, 45.0, fx)
 		fx.text(player.position + Vector2(0, -16), "不动明王！", Color(0.6, 0.95, 1.0))
 		return
+	if _can_deathbomb():
+		db_t = deathbomb_window()
+		player.invuln = db_t + 0.1
+		_dbf.color.a = 0.45
+		Au.sfx("phit", -3.0, 0.0, 1.4)
+		fx.burst(player.position, Color(1, 1, 1), 12, 24.0)
+		return
+	_apply_hit()
+
+## 决死：被弹后的短窗口（手机上比原作宽一些）
+func deathbomb_window() -> float:
+	return 0.25 * (2.0 if G.has("db_epic") else 1.0)
+
+func _can_deathbomb() -> bool:
+	if G.bot or G.dev_god or G.run.bomb < 1.0:
+		return false
+	return not (G.has("m_final") and G.run.bomb < G.bomb_max())
+
+## 真正结算一次被弹
+func _apply_hit() -> void:
+	db_t = 0.0
 	hits += 1
 	phase_clean = false
 	graze_combo = 0
@@ -516,6 +553,17 @@ func use_bomb() -> void:
 	k = mini(k, 3)
 	if k >= 3:
 		G.ach("bomb3")
+	db_power = 1.0
+	if db_t > 0.0:   # 决死成功：抵消这次被弹
+		db_t = 0.0
+		phase_clean = false
+		db_power = 1.5 if G.has("db_epic") else 1.0
+		fx.text(player.position + Vector2(0, -26), "决死！", Color(1, 1, 0.7))
+		G.ach("deathbomb")
+		if G.has("db_refund"):
+			G.run.bomb += k * 0.5   # 返还一半进度（在下面扣除之前先加上）
+			afterglow_t = maxf(afterglow_t, 4.0)
+			fx.text(player.position + Vector2(0, -38), "决死结界", Color(1, 0.8, 0.95))
 	G.run.bomb -= k
 	phase_clean = false
 	Au.sfx("bomb")
@@ -532,11 +580,11 @@ func use_bomb() -> void:
 		var plus := G.has("m_spark_plus")
 		spark_t = [0.0, 2.0, 3.0, 4.2][k] * (1.6 if plus else 1.0) * fin
 		spark_w = [0.0, 30.0, 42.0, 58.0][k] * (1.3 if plus else 1.0) * fin
-		spark_dps = [0.0, 150.0, 190.0, 240.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * (3.0 if G.has("m_final") else 1.0)
+		spark_dps = [0.0, 150.0, 190.0, 240.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * (3.0 if G.has("m_final") else 1.0) * db_power
 		player.invuln = maxf(player.invuln, spark_t + 0.5)
 	var orbs: int = [0, 8, 14, 22][k] if G.run.char == "reimu" else 0
 	G.after_t = 5.0
-	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0)
+	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * db_power
 	if G.has("bomb_shock"):
 		for en in enemies.list:
 			if not en.dead:
