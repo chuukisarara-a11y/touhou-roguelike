@@ -19,6 +19,13 @@ class Shot:
 	var charge := 0.0   # 命中时符卡槽充能
 	var rot := false
 	var split_mod := false
+	var chain := 0        # 命中后弹向下一个敌人的次数
+	var near_bonus := false   # 散札：离自机越近伤害越高
+	var stun := 0.0       # 封印札：定身秒数
+	var seal := false
+	var clear_r := 0.0    # 命中时消除敌人周围的敌弹
+	var rift := false     # 境界裂隙系：命中计数
+	var pen := false      # 贯魔针·破甲
 	var child := false
 	var big := false
 	var dead := false
@@ -27,7 +34,7 @@ class Shot:
 	var hit_ids := {}
 
 var list := []
-var zones := []   # 御柱：[x, half_w, delay, dmg, show_t]
+var zones := []   # 御柱：[x, half_w, delay, dmg, show_t, 落点y（<0 表示不留墙）]
 var gaps := []    # 隙间：[pos, life]
 
 func _ready() -> void:
@@ -62,8 +69,8 @@ func spawn(kind: String, pos: Vector2, vel: Vector2, dmg: float, opts := {}) -> 
 	_new.append(s)
 	return s
 
-func add_zone(x: float, half_w: float, delay: float, dmg: float) -> void:
-	zones.append([x, half_w, delay, dmg, 0.25])
+func add_zone(x: float, half_w: float, delay: float, dmg: float, land_y := -1.0) -> void:
+	zones.append([x, half_w, delay, dmg, 0.25, land_y])
 
 func tick(dt: float, battle) -> void:
 	list.append_array(_new)
@@ -101,6 +108,21 @@ func tick(dt: float, battle) -> void:
 			var r: float = e.radius + s.radius
 			if s.pos.distance_squared_to(e.pos) < r * r:
 				_on_hit(s, e, battle)
+				if s.chain > 0:   # 连锁：转向下一个敌人
+					s.chain -= 1
+					s.hit_ids[e.id] = true
+					var nx = null
+					var bd := 1e12
+					for o in enemies:
+						if not o.dead and not s.hit_ids.has(o.id):
+							var dd: float = o.pos.distance_squared_to(s.pos)
+							if dd < bd:
+								bd = dd; nx = o
+					if nx != null:
+						s.vel = (nx.pos - s.pos).normalized() * s.vel.length()
+						break
+					s.dead = true
+					break
 				if s.pierce > 0:
 					s.pierce -= 1
 					s.hit_ids[e.id] = true
@@ -116,6 +138,8 @@ func tick(dt: float, battle) -> void:
 					if not e.dead and absf(e.pos.x - z[0]) < z[1] + e.radius:
 						e.hurt(z[3], battle)
 				battle.shake = 0.12
+				if z[5] >= 0.0:   # 御柱落地后留在原地当墙
+					battle.fams.pillar_land(z[0], z[5], z[1])
 			z[4] -= dt
 	zones = zones.filter(func(z): return z[4] > 0.0)
 	for g in gaps:
@@ -141,7 +165,28 @@ func _on_hit(s: Shot, e, battle) -> void:
 			e.ice_mark = true
 	if s.charge > 0.0:
 		battle.add_bomb(s.charge)
-	e.hurt(s.dmg, battle)
+	var d: float = s.dmg
+	if s.near_bonus:
+		var dist: float = battle.player.position.distance_to(e.pos)
+		d *= clampf(1.8 - dist / 90.0, 0.6, 1.8) * (2.0 if (G.br("amulet_fan") == 0 and dist < 50.0) else 1.0)
+	if e.stun_t > 0.0 and e.sealed:
+		d *= 1.3
+	if s.stun > 0.0:
+		e.stun_t = maxf(e.stun_t, s.stun * (0.35 if e.is_boss else 1.0))
+		e.sealed = s.seal
+	if s.clear_r > 0.0:
+		battle.bullets.clear_near(e.pos, s.clear_r, battle.fx)
+	if G.has_fam("amulet") and G.has("am_seal") and s.kind == "amulet":
+		battle.on_graze(s.pos)
+	if s.rift:
+		battle.fams.on_rift_hit()
+	if s.pen and (e.armor or (e.mech == "shield" and e.shield_n > 0)):
+		var sn: int = e.shield_n
+		e.shield_n = 0
+		e.hurt(d * 2.0, battle)
+		e.shield_n = sn
+	else:
+		e.hurt(d, battle)
 	if steam and e.steam_cd <= 0.0 and G.has_tags("火", "冰"):
 		e.steam_cd = 1.0
 		battle.fx.burst(e.pos, Color(1, 1, 1), 12, 30.0)
@@ -166,11 +211,14 @@ func nearest(pos: Vector2, enemies: Array):
 func _draw() -> void:
 	var battle = get_parent()
 	var p: Player = battle.player
-	if p.laser_t > 0.0 and battle.state != "lost":
-		var lw: float = p.laser_w
-		for lo in p.laser_offs:
-			draw_rect(Rect2(p.position.x + lo - lw / 2 - 1, 0, lw + 2, p.position.y - 10), Color(0.4, 0.8, 1.0, 0.45))
-			draw_rect(Rect2(p.position.x + lo - lw / 2 + 1, 0, maxf(lw - 2, 1), p.position.y - 10), Color(0.9, 1.0, 1.0, 0.85))
+	if battle.state != "lost":   # 镭射类射线
+		for bm in p.beams:
+			var o: Vector2 = bm[0]
+			var e: Vector2 = o + Vector2.from_angle(bm[1]) * 420.0
+			var bw: float = bm[2]
+			var c: Color = bm[4]
+			draw_line(o, e, Color(c.r * 0.5, c.g * 0.85, 1.0, 0.45), bw + 2.0)
+			draw_line(o, e, Color(c, 0.85), maxf(bw - 2.0, 1.0))
 	for z in zones:
 		if z[2] > 0.0:
 			draw_rect(Rect2(z[0] - z[1], 0, z[1] * 2, battle.field_h), Color(1, 0.8, 0.4, 0.12))

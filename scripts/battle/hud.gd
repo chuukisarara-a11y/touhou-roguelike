@@ -4,6 +4,7 @@ extends Node2D
 
 var battle
 var bomb_rect := Rect2()
+var fam_rect := Rect2()   # 使魔跟随/原地切换按钮（有使魔时才显示）
 var cutin_t := 0.0
 var cutin_tex: Texture2D
 
@@ -14,6 +15,7 @@ func cutin(tex_name: String) -> void:
 func setup(b) -> void:
 	battle = b
 	bomb_rect = Rect2(G.FIELD_W - 42, b.field_h - 42, 36, 36)
+	fam_rect = Rect2(G.FIELD_W - 76, b.field_h - 34, 28, 28)
 
 func tick() -> void:
 	cutin_t -= get_process_delta_time()
@@ -74,6 +76,13 @@ func _draw() -> void:
 		var pp := ctr + Vector2(-(mx - 1) * 4.0 + i * 8.0, -23)
 		draw_circle(pp, 2.5, Color(1, 0.4, 0.5) if i < full else Color(0.25, 0.25, 0.35, 0.8))
 	draw_string(f, ctr + Vector2(-12, 4), "符卡", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE if ready else Color(0.6, 0.6, 0.7))
+	# 使魔切换按钮
+	if G.familiar_count() > 0:
+		var fc := fam_rect.get_center()
+		var stay: bool = battle.fams.fam_stay
+		draw_circle(fc, 14, Color(0, 0, 0, 0.35))
+		draw_arc(fc, 13, 0, TAU, 24, Color(1, 0.7, 1.0, 0.8) if stay else Color(0.75, 0.7, 0.95, 0.7), 1.5)
+		draw_string(f, fc + Vector2(-12, 4), "原地" if stay else "跟随", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.85, 1.0) if stay else Color(0.9, 0.9, 1.0))
 	# 擦弹连击
 	if battle.graze_combo >= 5:
 		var pc: Vector2 = battle.player.position + Vector2(10, -16)

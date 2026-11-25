@@ -45,6 +45,8 @@ class Enemy:
 	var armor := false    # 被护卫型敌人保护中
 	var split_lv := 0
 	var vel := Vector2.ZERO
+	var stun_t := 0.0     # 被封印札定住
+	var sealed := false
 
 	func hurt(d: float, battle) -> void:
 		if dead or pause > 0.0:
@@ -55,6 +57,8 @@ class Enemy:
 		if armor:
 			d *= 0.35
 		hp -= d
+		if battle.has_method("on_dealt"):
+			battle.on_dealt(d)
 		flash = 0.06
 		Au.sfx("hit", -8.0)
 		if hp <= 0.0:
@@ -177,6 +181,9 @@ func tick(dt: float, battle) -> void:
 			if e.dead:
 				continue
 		var edt := dt
+		if e.stun_t > 0.0:   # 定身：不动也不攻击
+			e.stun_t -= dt
+			continue
 		if e.slow_t > 0.0:
 			e.slow_t -= dt
 			edt *= 0.5
@@ -378,6 +385,10 @@ func _draw() -> void:
 		if e.is_boss and e.pause > 0.0 and int(e.pause * 12.0) % 2 == 0:
 			c.a = 0.5
 		draw_texture_rect(t, Rect2(p, sz), false, c)
+		if e.stun_t > 0.0:   # 被封印札定住：头上一张符
+			draw_rect(Rect2(e.pos.x - 3, p.y - 6, 6, 8), Color(1, 0.95, 0.85))
+			draw_rect(Rect2(e.pos.x - 2, p.y - 4, 4, 1), Color(0.9, 0.2, 0.25))
+			draw_rect(Rect2(e.pos.x - 2, p.y - 1, 4, 1), Color(0.9, 0.2, 0.25))
 		if not e.is_boss and e.hp < e.max_hp:
 			var w := 14.0
 			draw_rect(Rect2(e.pos.x - w / 2, p.y - 3, w, 2), Color(0.1, 0.1, 0.15))

@@ -15,6 +15,7 @@ var bullets: BulletLayer
 var items: ItemLayer
 var fx: FxLayer
 var player: Player
+var fams: FamSys
 var hud: Hud
 
 var state := "play"   # play / won / lost
@@ -85,6 +86,7 @@ func _ready() -> void:
 	items = ItemLayer.new(); add_child(items)
 	shots = ShotLayer.new(); add_child(shots)
 	player = Player.new(); add_child(player)
+	fams = FamSys.new(); add_child(fams); fams.setup(self)
 	player.position = Vector2(G.FIELD_W / 2, field_h - 70)
 	bullets = BulletLayer.new(); add_child(bullets)
 	fx = FxLayer.new(); add_child(fx)
@@ -127,6 +129,8 @@ func _input(ev: InputEvent) -> void:
 				return
 			if hud.bomb_rect.grow(6).has_point(ev.position):
 				use_bomb()
+			elif G.familiar_count() > 0 and hud.fam_rect.grow(4).has_point(ev.position):
+				fams.toggle_familiars()
 			elif move_finger == -1:
 				move_finger = ev.index
 		elif ev.index == move_finger:
@@ -135,6 +139,8 @@ func _input(ev: InputEvent) -> void:
 		player.touch_delta += ev.relative
 	elif ev.is_action_pressed("bomb"):
 		use_bomb()
+	elif ev is InputEventKey and ev.pressed and ev.keycode == KEY_C and G.familiar_count() > 0:
+		fams.toggle_familiars()
 
 func _process(real_dt: float) -> void:
 	real_dt = minf(real_dt, 0.05)
@@ -177,6 +183,7 @@ func _process(real_dt: float) -> void:
 	counter_cd -= dt
 	spell_bg.tick(dt)
 	player.tick(dt, real_dt, self)
+	fams.tick(dt)
 	if spark_t > 0.0:
 		_tick_spark(dt)
 	if G.has("m_missile") and state == "play":
@@ -329,12 +336,16 @@ func add_bomb(v: float) -> void:
 	G.run.bomb = minf(float(G.bomb_max()), G.run.bomb + v)
 
 func graze_radius() -> float:
-	return player.graze_radius() * (1.0 + 0.08 * G.spirit_lv) * (1.5 if afterglow_t > 0.0 else 1.0)
+	return player.graze_radius() * (1.0 + 0.08 * G.spirit_lv) * (1.5 if afterglow_t > 0.0 else 1.0) * (1.5 if (G.nd_full and G.has("nd_mirror")) else 1.0)
 
 ## 一次擦弹的符卡充能（随连击倍率，最多 ×3；吃剃刀边缘、红茶、余韵等加成）
 func graze_charge() -> float:
 	var mult := 1.0 + 0.08 * mini(graze_combo, 25)
-	return 0.02 * mult * (2.0 if G.has("razor") else 1.0) * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0)
+	return 0.02 * mult * (1.15 if (G.run.char == "reimu" and G.has_fam("amulet")) else 1.0) * (2.0 if G.has("razor") else 1.0) * (1.4 if G.has("tea") else 1.0) * (2.0 if afterglow_t > 0.0 else 1.0)
+
+## 敌人受到的伤害（星图按伤害计数）
+func on_dealt(d: float) -> void:
+	fams.on_dealt(d)
 
 ## 吃到 P 点：等于 3 次擦弹的充能
 func on_power() -> void:
@@ -582,6 +593,7 @@ func use_bomb() -> void:
 		spark_w = [0.0, 30.0, 42.0, 58.0][k] * (1.3 if plus else 1.0) * fin
 		spark_dps = [0.0, 150.0, 190.0, 240.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * (3.0 if G.has("m_final") else 1.0) * db_power
 		player.invuln = maxf(player.invuln, spark_t + 0.5)
+	fams.on_bomb(k)
 	var orbs: int = [0, 8, 14, 22][k] if G.run.char == "reimu" else 0
 	G.after_t = 5.0
 	var dmg: float = [0.0, 60.0, 75.0, 90.0][k] * G.dmg_mult() * (1.4 if G.has("bomb_big") else 1.0) * db_power

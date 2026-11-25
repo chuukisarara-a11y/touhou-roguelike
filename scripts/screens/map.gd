@@ -23,6 +23,7 @@ func _ready() -> void:
 	h = G.field_h()
 	UI.backdrop(self)
 	UI.status(self)
+	_branch_check.call_deferred()
 	if G.run.money >= 500:
 		G.ach("rich")
 	if G.run.skills.size() >= 6:
@@ -74,6 +75,42 @@ func _shard_info() -> void:
 	var l := ov.add_label(txt)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	ov.add_button("知道了", func(): ov.close())
+
+## 攻符升到 Lv3：二选一的分支
+func _branch_check() -> void:
+	var w = G.pending_branch()
+	if w == null or G.bot:
+		return
+	var d: Dictionary = Db.WEAPONS[w.id]
+	var ov := UI.Overlay.new("%s Lv3：选一个方向" % d.name, 200.0)
+	add_child(ov)
+	for k in 2:
+		var kk := k
+		ov.add_button("%s\n%s" % [d.br[k][0], d.br[k][1]], func():
+			w["br"] = kk
+			ov.close()
+			Au.sfx("select")
+			if w.id == "familiar" and kk == 1:
+				_copy_pick(w)
+			else:
+				_branch_check.call_deferred(), 44.0)
+
+## 使魔·复制：选一张要复制的攻符
+func _copy_pick(w: Dictionary) -> void:
+	var ids: Array = G.run.weapons.map(func(x): return x.id).filter(func(x): return Db.COPYABLE.has(x))
+	if ids.is_empty():
+		w["copy"] = ""
+		G.main.toast("还没有能复制的攻符，先打初始攻击")
+		_branch_check.call_deferred()
+		return
+	var ov := UI.Overlay.new("使魔要复制哪一张攻符？", 60.0 + ids.size() * 30.0)
+	add_child(ov)
+	for id in ids:
+		var cid: String = id
+		ov.add_button(Db.WEAPONS[cid].name, func():
+			w["copy"] = cid
+			ov.close()
+			_branch_check.call_deferred())
 
 func _menu() -> void:
 	var ov := UI.Overlay.new("菜单", 128.0)
@@ -159,6 +196,10 @@ func _draw() -> void:
 		draw_texture(it, (p - it.get_size() / 2.0).round(), Color.WHITE if not passed else Color(0.55, 0.55, 0.6))
 
 func bot_step() -> void:
+	var pw = G.pending_branch()
+	while pw != null:
+		pw["br"] = G.rng.randi_range(0, 1)
+		pw = G.pending_branch()
 	if gap_open():
 		G.main.goto("event", {"id": "gap", "free": true})
 		return

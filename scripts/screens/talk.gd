@@ -27,6 +27,9 @@ func setup(arg: Dictionary) -> void:
 	for x in Db.TALK_EXTRA:
 		if x.char == G.run.char and x.boss == boss_id and (G.weapon(x.need) != null or G.has(x.need)):
 			lines.append_array(x.lines)
+	var mf := G.main_family()   # 构筑彩蛋对话
+	if mf != "" and Db.TALK_FAM.has(mf) and Db.TALK_FAM[mf].has(boss_id):
+		lines.append_array(Db.TALK_FAM[mf][boss_id])
 
 func _ready() -> void:
 	h = G.field_h()

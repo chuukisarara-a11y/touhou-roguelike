@@ -93,7 +93,7 @@ func _ready() -> void:
 	cl.add_child(_fade)
 	_cl = cl
 	goto("title")
-	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest", "_chartest", "_metatest", "_dbtest"]:   # 开发用的自动测试脚本
+	for tn in ["uitest", "_scrolltest", "_spelltest", "_mobtest", "_bagtest", "_chartest", "_metatest", "_dbtest", "_famtest"]:   # 开发用的自动测试脚本
 		if OS.get_cmdline_user_args().has("--" + tn.trim_prefix("_")):
 			add_child(load("res://tools/%s.gd" % tn).new())
 

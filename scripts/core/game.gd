@@ -27,6 +27,7 @@ var meta := {"settings": {"bgm": 8, "sfx": 8, "shake": true, "slowmo": true}, "s
 var dev_god := false     # 开发者：无敌
 var combo := 0           # 当前擦弹连击（战斗里实时更新，供伤害计算用）
 var focus_on := false    # 专注状态（缓慢移动或静止）
+var nd_full := false     # 封魔针系：集中满 5 层
 var after_t := 0.0       # 「残心」剩余秒数
 var battle_t := 0.0      # 本场战斗已进行的秒数
 var mush := -1           # 「魔法蘑菇」本场的增益：0 伤害 1 移速 2 符卡
@@ -127,6 +128,9 @@ func load_run() -> bool:
 		if Db.SKILLS.has(r):
 			run.relics.erase(r)
 			run.skills.append(r)
+	run.skills = run.skills.filter(func(x): return Db.SKILLS.has(x))   # 删掉已经移除的秘符（如护卫式神）
+	run.relics = run.relics.filter(func(x): return Db.RELICS.has(x))
+	run.weapons = run.weapons.filter(func(w): return Db.WEAPONS.has(w.id))
 	resume = {"screen": d.get("screen", "map"), "arg": d.get("arg", {})}
 	return true
 
@@ -291,6 +295,45 @@ func weapon(id: String):
 			return w
 	return null
 
+# ---------- 攻符系列 ----------
+func has_fam(f: String) -> bool:
+	for w in run.get("weapons", []):
+		if Db.WEAPONS[w.id].get("fam", "") == f:
+			return true
+	return false
+
+## 第 lv3 分支：没有分支的攻符返回 -1
+func br(id: String) -> int:
+	var w = weapon(id)
+	if w == null or w.lv < 3:
+		return -1
+	return w.get("br", 0)
+
+## 系列卡（攻符 + 系列秘符）占全部攻符+秘符的比例最高的那个系列；不到 60% 返回 ""
+func main_family() -> String:
+	var cnt := {}
+	var total := 0
+	for w in run.weapons:
+		total += 1
+		var f: String = Db.WEAPONS[w.id].get("fam", "")
+		cnt[f] = cnt.get(f, 0) + 1
+	for sid in run.skills:
+		total += 1
+		var f2: String = Db.SKILLS[sid].get("fam", "")
+		if f2 != "":
+			cnt[f2] = cnt.get(f2, 0) + 1
+	for f in cnt:
+		if f != "" and cnt[f] >= 3 and cnt[f] >= total * 0.6:
+			return f
+	return ""
+
+## 还没选 Lv3 分支的攻符（地图界面会弹出选择）
+func pending_branch():
+	for w in run.get("weapons", []):
+		if w.lv >= 3 and not w.has("br") and Db.WEAPONS[w.id].has("br"):
+			return w
+	return null
+
 func tag_count(tag: String) -> int:
 	var n := 0
 	for w in run.weapons:
@@ -355,10 +398,14 @@ func speed_mult() -> float:
 ## 使魔：数量与单发伤害（不受自机伤害加成中的「人形师」惩罚）
 func familiar_count() -> int:
 	var n := (1 if has("shanghai") else 0) + (1 if has("hourai") else 0) + (1 if has("puppeteer") else 0)
+	var fw = weapon("familiar")
+	if fw != null:
+		n += [0, 2, 3, 3][fw.lv] + (2 if fw.lv >= 3 and fw.get("br", -1) == 0 else 0)
 	return n * (2 if has("puppeteer") else 1)
 
 func familiar_dmg() -> float:
-	return 5.0 * (1.3 if has("hourai") else 1.0) * (1.0 + 0.1 * run.power + 0.05 * spirit_lv)
+	var fw = weapon("familiar")
+	return (1.3 if fw != null and fw.lv >= 2 else 1.0) * 5.0 * (1.3 if has("hourai") else 1.0) * (1.0 + 0.1 * run.power + 0.05 * spirit_lv)
 
 ## 符卡槽：以「格」为单位，默认最多存 2 格
 func bomb_max() -> int:
@@ -421,7 +468,7 @@ func card_pool() -> Array:
 				cands.append({"kind": "new", "id": id})
 	if run.skills.size() < run.max_skills:
 		for id in Db.SKILLS:
-			if not has(id) and skill_ok(id):
+			if not has(id) and skill_ok(id) and (not Db.SKILLS[id].has("fam") or has_fam(Db.SKILLS[id].fam)):
 				cands.append({"kind": "skill", "id": id})
 	# 符札改造：每张攻符最多 2 个
 	for w in run.weapons:
@@ -448,15 +495,17 @@ func roll_cards(n: int) -> Array:
 		if not by.has(c.kind):
 			by[c.kind] = []
 		by[c.kind].append(c)
-	var kw := {"new": 3.0, "up": 3.0, "mod": 2.0, "skill": 3.5}
+	var kw := {"new": 3.0, "up": 2.5, "mod": 2.0, "skill": 4.0}
 	var out := []
 	while out.size() < n and not by.is_empty():
 		var kinds := by.keys()
 		var k: String = kinds[_weighted(kinds.map(func(x): return kw[x]))]
 		var arr: Array = by[k]
 		var i := rng.randi_range(0, arr.size() - 1)
-		if k == "skill":
-			i = _weighted(arr.map(func(c): return [6.0, 3.0, 1.2][Db.SKILLS[c.id].rar]))
+		if k == "skill":   # 稀有度加权；已有系列的系列秘符更常出现
+			i = _weighted(arr.map(func(c): return [6.0, 3.0, 1.2][Db.SKILLS[c.id].rar] * (2.5 if Db.SKILLS[c.id].has("fam") else 1.0)))
+		elif k == "new":   # 已有系列的其他变体更常出现
+			i = _weighted(arr.map(func(c): return 3.0 if has_fam(Db.WEAPONS[c.id].fam) else 1.0))
 		out.append(arr[i])
 		arr.remove_at(i)
 		if arr.is_empty():
@@ -494,6 +543,8 @@ func card_text(c: Dictionary) -> String:
 	if c.kind == "new":
 		return "新·%s〔%s〕\n%s" % [d.name, d.tag, d.desc[0]]
 	var lv: int = weapon(c.id).lv + 1
+	if lv >= 3 and d.has("br"):
+		return "强化·%s Lv3\n二选一：%s / %s" % [d.name, d.br[0][0], d.br[1][0]]
 	return "强化·%s Lv%d\n%s" % [d.name, lv, d.desc[lv - 1]]
 
 func relic_text(id: String) -> String:
@@ -522,6 +573,8 @@ func random_mod() -> String:
 ## 符札的显示名：封魔针3〔贯通·连射〕
 func weapon_label(w: Dictionary) -> String:
 	var s := "%s%d" % [Db.WEAPONS[w.id].name, w.lv]
+	if w.lv >= 3 and w.get("br", -1) >= 0 and Db.WEAPONS[w.id].has("br"):
+		s += "·" + Db.WEAPONS[w.id].br[w.br][0]
 	var ms: Array = w.get("mods", [])
 	if not ms.is_empty():
 		s += "〔" + "·".join(ms.map(func(m): return Db.MODS[m].name)) + "〕"

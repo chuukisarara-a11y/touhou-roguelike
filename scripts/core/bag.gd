@@ -64,9 +64,15 @@ static func detail(parent: Node, kind: String, id: String) -> void:
 		var d: Dictionary = Db.WEAPONS[id]
 		var w = G.weapon(id)
 		var lv: int = w.lv if w != null else 0
-		head = "攻符 · %s" % d.tag
-		for i in 3:
+		head = "攻符 · %s系 · %s" % [Db.FAMS.get(d.get("fam", ""), "其他"), d.tag]
+		for i in 2:
 			lines.append("%s Lv%d　%s" % ["◆" if i < lv else "◇", i + 1, d.desc[i]])
+		if d.has("br"):   # Lv3：二选一的分支
+			var bsel: int = w.get("br", -1) if (w != null and lv >= 3) else -1
+			for k in 2:
+				lines.append("%s Lv3·%s　%s" % ["◆" if bsel == k else "◇", d.br[k][0], d.br[k][1]])
+		else:
+			lines.append("%s Lv3　%s" % ["◆" if lv >= 3 else "◇", d.desc[2]])
 		if w != null:
 			for m in w.get("mods", []):
 				lines.append("改造〔%s〕%s" % [Db.MODS[m].name, Db.MODS[m].desc])
@@ -74,7 +80,7 @@ static func detail(parent: Node, kind: String, id: String) -> void:
 				lines.append("已觉醒：伤害 +60%")
 	else:
 		var d2: Dictionary = Db.SKILLS[id] if kind == "skill" else Db.RELICS[id]
-		head = "%s · %s%s" % ["秘符" if kind == "skill" else "宝具", ["普通", "稀有", "史诗"][d2.rar], ("　" + d2.arch + "流") if d2.has("arch") else ""]
+		head = "%s · %s%s" % ["秘符" if kind == "skill" else "宝具", ["普通", "稀有", "史诗"][d2.rar], ("　" + d2.arch + ("系" if d2.has("fam") else "流")) if d2.has("arch") else ""]
 		lines.append(d2.desc)
 	var text := "\n".join(lines)
 	var th := UI.text_h(text, G.FIELD_W - 24.0)

@@ -15,7 +15,7 @@ var orb_ang := 0.0
 var dolls := []
 var laser_w := 0.0
 var laser_t := 0.0
-var laser_offs := [0.0]
+var beams := []         # 本帧要画的射线：[起点, 角度, 宽度, 剩余时间, 颜色]
 var fams := []          # 使魔：[pos, eat_cd]
 var fam_cd := 0.0
 var speed_s := 99.0     # 平滑后的移动速度
@@ -65,21 +65,11 @@ func tick(dt: float, real_dt: float, battle) -> void:
 	if G.has("slow_shield") and not guard and guard_cd <= 0.0 and focus_t >= 2.0:
 		guard = true
 		Au.sfx("heal", -4.0)
-	# 使魔
+	# 使魔（位置与射击由 FamSys 处理）
 	var nf := G.familiar_count()
 	while fams.size() < nf:
 		fams.append([position, 0.0])
-	for i in nf:
-		var fm: Array = fams[i]
-		fm[0] = position + Vector2.from_angle(-orb_ang * 0.45 + TAU * i / nf) * 30.0
-		fm[1] -= dt
-		if G.has("familiar_guard") and fm[1] <= 0.0:
-			for bl in battle.bullets.list:
-				if not bl.dead and bl.pos.distance_squared_to(fm[0]) < (bl.r + 5.0) * (bl.r + 5.0):
-					bl.dead = true
-					fm[1] = 0.8
-					battle.fx.spark(bl.pos, Color(0.7, 0.9, 1.0))
-					break
+	orb_ang += dt * 3.5
 	# 魔理沙：星屑轨迹 / 卫星幻觉
 	trail_cd -= dt
 	if G.has("m_star_trail") and speed_s > 60.0 and trail_cd <= 0.0 and battle.state == "play":
@@ -91,37 +81,14 @@ func tick(dt: float, real_dt: float, battle) -> void:
 			sat_cd = 0.8
 			for i in 4:
 				battle.shots.spawn("star", position + Vector2.from_angle(orb_ang * 0.8 + TAU * i / 4.0) * 20.0, Vector2(0, -240.0), 4.0 * G.dmg_mult())
-	fam_cd -= dt
-	if nf > 0 and fam_cd <= 0.0 and battle.state == "play":
-		fam_cd = 0.5 / (2.0 if G.has("puppeteer") else 1.0)
-		for i in nf:
-			var target = battle.shots.nearest(fams[i][0], battle.enemies.list)
-			var dir := Vector2.UP
-			if target != null:
-				dir = (target.pos - fams[i][0]).normalized()
-			battle.shots.spawn("needle", fams[i][0], dir * 300.0, G.familiar_dmg(), {"rot": true})
-	# 阴阳玉
-	var yy = G.weapon("yinyang")
-	var n: int = yy.lv if yy != null else 0
-	while orbs.size() < n:
-		orbs.append([position, 0.0])
-	orb_ang += dt * 3.5
-	for i in n:
-		var o: Array = orbs[i]
-		o[0] = position + Vector2.from_angle(orb_ang + TAU * i / n) * 22.0
-		o[1] -= dt
-		if o[1] <= 0.0:
-			for bl in battle.bullets.list:
-				if not bl.dead and bl.pos.distance_squared_to(o[0]) < (bl.r + 5.0) * (bl.r + 5.0):
-					bl.dead = true
-					o[1] = 0.3
-					battle.fx.spark(bl.pos, Color(1, 0.6, 0.6))
-					break
 	# 人偶
 	if G.weapon("doll") != null:
 		dolls = [position + Vector2(-17, 5), position + Vector2(17, 5)]
 	# 射击
 	laser_t -= dt
+	for bm in beams:
+		bm[3] -= dt
+	beams = beams.filter(func(bm): return bm[3] > 0.0)
 	if battle.state == "play" and not G.has("reflect"):
 		for w in G.run.weapons:
 			w.cd -= dt
@@ -137,9 +104,6 @@ func tick(dt: float, real_dt: float, battle) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var yt := G.tex("yinyang")
-	for o in orbs:
-		draw_texture(yt, (o[0] - position - yt.get_size() / 2.0))
 	if G.has("m_orbit"):
 		var st := G.tex("star")
 		for i in 4:

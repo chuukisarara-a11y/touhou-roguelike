@@ -32,7 +32,7 @@ func _ready() -> void:
 	y += 26
 	UI.button(self, "游戏说明", y, func(): UI.tutorial(self), 23.0, false, {}, 8.0, hw)
 	UI.button(self, "设置", y, func(): UI.open_settings(self), 23.0, false, {}, 12.0 + hw, hw)
-	UI.label(self, "东方Project 同人作品　v0.15", h - 16, 12, Color(0.55, 0.53, 0.7))
+	UI.label(self, "东方Project 同人作品　v0.16", h - 16, 12, Color(0.55, 0.53, 0.7))
 
 func _new_game() -> void:
 	if G.has_save():
